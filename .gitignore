@@ -171,4 +171,6 @@ cython_debug/
 .pypirc
 
 
+# levi settings
 ignoreFolder
+output

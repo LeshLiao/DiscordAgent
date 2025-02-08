@@ -5,6 +5,9 @@ from dotenv import load_dotenv
 from PIL import Image
 import os
 
+import pyautogui
+import time
+
 load_dotenv()
 discord_token = os.getenv('DISCORD_TOKEN')
 
@@ -12,6 +15,38 @@ client = commands.Bot(command_prefix="*", intents=discord.Intents.all())
 
 directory = os.getcwd()
 print(directory)
+
+
+my_prompt = "a man is programming in the garden."
+
+def click_discord_and_type():
+    # Give you time to switch to the right window
+    time.sleep(2)
+
+    # Click on Discord message box  (x=1923, y=935
+    pyautogui.click(x=1923, y=935)  # You'll need to adjust these coordinates
+
+    # Type the command
+    pyautogui.write("/imagine")
+    time.sleep(1)
+    pyautogui.press('enter')
+    time.sleep(1)
+    pyautogui.write("a man is programming in the garden.")
+    time.sleep(1)
+    pyautogui.press('enter')
+
+
+# Add the imagine command
+@client.command()
+async def imagine(ctx):
+    click_discord_and_type()
+    await ctx.send("Command triggered!")
+
+    """Format and send the prompt in a way that's easy to copy-paste into Midjourney"""
+    #formatted_prompt = f"/imagine prompt: {my_prompt}"
+    #await ctx.send("a man is programming in the garden.")
+    #await ctx.send(formatted_prompt)
+
 
 def split_image(image_file):
     with Image.open(image_file) as im:
@@ -70,6 +105,10 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
+    # Process commands first
+    await client.process_commands(message)
+
+    # Then handle attachments
     for attachment in message.attachments:
         if "Upscaled by" in message.content:
             file_prefix = 'UPSCALED_'
