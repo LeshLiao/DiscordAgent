@@ -1,4 +1,3 @@
-# utility.py
 import time
 import pyautogui
 import aiohttp
@@ -36,18 +35,44 @@ async def download_image(url, filename, prefix):
                     with open(input_path, "wb") as f:
                         f.write(await response.read())
 
+                    # Convert PNG to JPG if it's a PNG file
+                    if filename.lower().endswith('.png'):
+                        with Image.open(input_path) as im:
+                            # Convert to RGB mode if necessary
+                            if im.mode in ('RGBA', 'LA') or (im.mode == 'P' and 'transparency' in im.info):
+                                bg = Image.new('RGB', im.size, (255, 255, 255))
+                                if im.mode == 'RGBA':
+                                    bg.paste(im, mask=im.split()[3])
+                                else:
+                                    bg.paste(im)
+                                im = bg
 
-                    # Get image resolution
-                    with Image.open(input_path) as im:
-                        width, height = im.size
-                        print(f"width={width} x height={height}")
-                        resolution_name = f"{prefix}_{width}x{height}_"
+                            # Get image resolution
+                            width, height = im.size
+                            print(f"width={width} x height={height}")
+                            resolution_name = f"{prefix}_{width}x{height}_"
 
-                    print(f"Image downloaded: {resolution_name}{filename}")
+                            # Change extension to jpg
+                            jpg_filename = os.path.splitext(filename)[0] + '.jpg'
+                            output_path = os.path.join(output_folder, f"{resolution_name}{jpg_filename}")
 
-                    # Move to output with resolution prefix
-                    output_path = os.path.join(output_folder, f"{resolution_name}{filename}")
-                    os.rename(input_path, output_path)
+                            # Save as JPG
+                            im.save(output_path, 'JPEG', quality=95)
+
+                            # Remove the original PNG file
+                            os.remove(input_path)
+
+                            print(f"Image converted and saved: {resolution_name}{jpg_filename}")
+                    else:
+                        # Handle non-PNG files
+                        with Image.open(input_path) as im:
+                            width, height = im.size
+                            print(f"width={width} x height={height}")
+                            resolution_name = f"{prefix}_{width}x{height}_"
+
+                            output_path = os.path.join(output_folder, f"{resolution_name}{filename}")
+                            os.rename(input_path, output_path)
+                            print(f"Image saved: {resolution_name}{filename}")
                 else:
                     print(f"Failed to download image. Status code: {response.status}")
 

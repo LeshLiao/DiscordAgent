@@ -9,6 +9,7 @@ import pyautogui
 import time
 
 from utility import click_discord_and_imagine, download_image
+from api.wallpaper_api import WallpaperAPI, ImageItem, DownloadItem
 
 load_dotenv()
 discord_token = os.getenv('DISCORD_TOKEN')
@@ -86,20 +87,61 @@ async def handle_upscale(message, image_url, file_name):
     except Exception as e:
         print(f"Error in handle_upscale: {e}")
 
-async def handle_publish():
-    pass
+async def handle_publish(message):
+    if "publish" in message.content:
+        # Initialize the API client
+        print("Start publish: adding a item...")
+        api = WallpaperAPI()
+
+        # Example data
+        image_list = [
+            ImageItem(type="small", name="small.jpg"),
+            ImageItem(type="large", name="large.jpg")
+        ]
+
+        download_list = [
+            DownloadItem(
+                size="1440x2560",
+                ext="jpg",
+                link="https://drive.google.com/uc?export=download&id=1SM60bJDGp29B7kh-sWjTmC2_1zSoZbAD"
+            )
+        ]
+
+        # Add a new wallpaper
+        result = api.add_wallpaper(
+            item_id="100099",
+            name="test",
+            price=2.8,
+            free_download=True,
+            stars=5,
+            photo_type="static",
+            tags=["Landscape"],
+            size_options=["1440x2560"],
+            thumbnail="100037.jpg",
+            preview="preview.jpg",
+            image_list=image_list,
+            download_list=download_list
+        )
+        print("Add wallpaper result:", result)
+        # Send a success message back to the "publish" channel
+        if result:  # Assuming 'result' indicates success
+            await message.channel.send("Item added successfully!")
+        else:
+            await message.channel.send("Failed to add the item.")
+
 
 @client.event
 async def on_message(message):
     try:
         channel_name = message.channel.name
-        print(f"\n===== message (channel: {channel_name}) =====\n")
+        print(f"\n===== message (channel: {channel_name}) =====")
+        print(" - message:")
         print(message)
-        print("\nmessage.content=")
+        print(" - message.content:")
         print(message.content)
-        print("\nmessage.attachments=")
+        print(" - message.attachments:")
         print(message.attachments)
-        print("===============================")
+        print("\n")
 
         # filter user
         # if message.author == client.user:
@@ -117,7 +159,7 @@ async def on_message(message):
         elif channel_name == "upscale":
             await handle_upscale(message, image_url, file_name)
         elif channel_name == "publish":
-            await handle_publish()
+            await handle_publish(message)
 
     except Exception as e:
         print(f"Error in on_message: {e}")
