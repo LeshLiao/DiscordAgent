@@ -8,8 +8,9 @@ import os
 import pyautogui
 import time
 
-from utility import click_discord_and_imagine, download_image
+from utility import click_discord_and_imagine, download_image, upload_to_firebase, initialize_firebase
 from api.wallpaper_api import WallpaperAPI, ImageItem, DownloadItem
+from api.publish_manager import PublishManager, PublishConfig  # Add this line
 
 load_dotenv()
 discord_token = os.getenv('DISCORD_TOKEN')
@@ -27,6 +28,10 @@ class CustomBot(commands.Bot):
         super().__init__(command_prefix="*", intents=intents)
         self.reconnect_attempts = 0
         self.session = None
+
+        self.thumbnail_url = ""
+        self.upscaled_url = ""
+        initialize_firebase()
 
     async def cleanup(self):
         """Cleanup method to properly close connections"""
@@ -70,7 +75,7 @@ async def handle_upload(message, image_url):
     try:
         if image_url:
             await message.channel.send(f"Processing prompt: {image_url}")
-            click_discord_and_imagine(f"{image_url} HDR Coastal Landscape --ar 9:16 --seed 10")
+            click_discord_and_imagine(f"{image_url} High quality --ar 9:16 --iw 3")
     except Exception as e:
         print(f"Error in handle_upload: {e}")
 
@@ -78,57 +83,66 @@ async def handle_upscale(message, image_url, file_name):
     try:
         if file_name.lower().endswith((".png", ".jpg", ".jpeg", ".gif")):
             if "- Upscaled" in message.content:
-                await download_image(image_url, file_name, "upscaled")
+                local_image_path = await download_image(image_url, file_name, "upscaled")
+                if local_image_path:
+                    firebase_url = upload_to_firebase(local_image_path, "upscaled")
+                    if firebase_url:
+                        client.upscaled_url = firebase_url
+                        await message.channel.send(f"Upscaled added to firebase successfully!")
+                        await publish_item(message)
+                    else:
+                        await message.channel.send("Failed to upload upscaled image to Firebase")
+
             elif "- Image #" in message.content:
-                await download_image(image_url, file_name, "thumbnail")
+                local_image_path = await download_image(image_url, file_name, "thumbnail")
+                if local_image_path:
+                    firebase_url = upload_to_firebase(local_image_path, "thumbnail")
+                    if firebase_url:
+                        client.thumbnail_url = firebase_url
+                        await message.channel.send(f"Thumbnail added to firebase successfully!")
+                    else:
+                        await message.channel.send("Failed to upload thumbnail to Firebase")
         else:
-            print(f"Error: unknown image format!")
+            print(f"Message:")
+            print(message.content)
 
     except Exception as e:
         print(f"Error in handle_upscale: {e}")
 
-async def handle_publish(message):
-    if "publish" in message.content:
-        # Initialize the API client
-        print("Start publish: adding a item...")
-        api = WallpaperAPI()
-
-        # Example data
-        image_list = [
-            ImageItem(type="small", name="small.jpg"),
-            ImageItem(type="large", name="large.jpg")
-        ]
-
-        download_list = [
-            DownloadItem(
-                size="1440x2560",
-                ext="jpg",
-                link="https://drive.google.com/uc?export=download&id=1SM60bJDGp29B7kh-sWjTmC2_1zSoZbAD"
-            )
-        ]
-
-        # Add a new wallpaper
-        result = api.add_wallpaper(
-            item_id="100099",
-            name="test",
-            price=2.8,
-            free_download=True,
-            stars=5,
-            photo_type="static",
-            tags=["Landscape"],
-            size_options=["1440x2560"],
-            thumbnail="100037.jpg",
-            preview="preview.jpg",
-            image_list=image_list,
-            download_list=download_list
+async def publish_item(message):
+    try:
+        # Create a custom configuration
+        config = PublishConfig(
+            default_price=3.0,
+            default_stars=4,
+            id_prefix="20"
         )
-        print("Add wallpaper result:", result)
-        # Send a success message back to the "publish" channel
-        if result:  # Assuming 'result' indicates success
-            await message.channel.send("Item added successfully!")
-        else:
-            await message.channel.send("Failed to add the item.")
 
+        # Initialize the manager
+        publisher = PublishManager(config)
+
+        # Get the URLs from the bot's state
+        if not client.thumbnail_url or not client.upscaled_url:
+            await message.channel.send("Error: Missing thumbnail or upscaled image URLs")
+            return
+
+        # Publish the item with actual URLs from the bot's state
+        await publisher.publish(
+            message=message,
+            thumbnail_url=client.thumbnail_url,
+            upscaled_url=client.upscaled_url,
+            title="AI Generated",  # You might want to make this configurable
+            tags=["AI Generated"],
+            resolution="1632x2912"  # This matches your original aspect ratio of 9:16
+        )
+
+        # Clear the URLs after successful publishing
+        client.thumbnail_url = ""
+        client.upscaled_url = ""
+
+    except Exception as e:
+        print(f"Error in publish_item: {e}")
+        await message.channel.send(f"Error during publication: {str(e)}")
 
 @client.event
 async def on_message(message):
@@ -158,8 +172,8 @@ async def on_message(message):
             await handle_upload(message, image_url)
         elif channel_name == "upscale":
             await handle_upscale(message, image_url, file_name)
-        elif channel_name == "publish":
-            await handle_publish(message)
+        # elif channel_name == "publish":
+        #     await handle_publish(message)
 
     except Exception as e:
         print(f"Error in on_message: {e}")
