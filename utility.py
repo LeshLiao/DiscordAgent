@@ -77,11 +77,11 @@ def upload_to_firebase(local_file_path, firebase_folder):
         print(f"File uploaded successfully to Firebase Storage: {destination_blob_name}")
 
         # Clean up local file after successful upload
-        try:
-            os.remove(local_file_path)
-            print(f"Local file deleted: {local_file_path}")
-        except Exception as e:
-            print(f"Warning: Could not delete local file: {e}")
+        # try:
+        #     os.remove(local_file_path)
+        #     print(f"Local file deleted: {local_file_path}")
+        # except Exception as e:
+        #     print(f"Warning: Could not delete local file: {e}")
 
         return public_url
 

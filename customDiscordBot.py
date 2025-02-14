@@ -7,6 +7,7 @@ from PIL import Image
 import os
 import pyautogui
 import time
+from open_ai import ImageAnalyzer
 
 from utility import click_discord_and_imagine, download_image, upload_to_firebase, initialize_firebase
 from api.wallpaper_api import WallpaperAPI, ImageItem, DownloadItem
@@ -29,6 +30,8 @@ class CustomBot(commands.Bot):
         self.reconnect_attempts = 0
         self.session = None
 
+        self.thumbnail_path = ""
+        self.upscaled_path = ""
         self.thumbnail_url = ""
         self.upscaled_url = ""
         initialize_firebase()
@@ -83,20 +86,28 @@ async def handle_upscale(message, image_url, file_name):
     try:
         if file_name.lower().endswith((".png", ".jpg", ".jpeg", ".gif")):
             if "- Upscaled" in message.content:
-                local_image_path = await download_image(image_url, file_name, "upscaled")
-                if local_image_path:
-                    firebase_url = upload_to_firebase(local_image_path, "upscaled")
+                client.upscaled_path = await download_image(image_url, file_name, "upscaled")
+                if client.upscaled_path:
+                    firebase_url = upload_to_firebase(client.upscaled_path, "upscaled")
                     if firebase_url:
                         client.upscaled_url = firebase_url
                         await message.channel.send(f"Upscaled added to firebase successfully!")
-                        await publish_item(message)
+
+                        # Initialize the image analyzer
+                        analyzer = ImageAnalyzer()
+                        try:
+                            # Analyze the thumbnail image
+                            title, tags = analyzer.analyze_image(client.thumbnail_path)
+                            await publish_item(message, title, tags)
+                        except Exception as e:
+                            await message.channel.send(f"Error analyzing image: {str(e)}")
                     else:
                         await message.channel.send("Failed to upload upscaled image to Firebase")
 
             elif "- Image #" in message.content:
-                local_image_path = await download_image(image_url, file_name, "thumbnail")
-                if local_image_path:
-                    firebase_url = upload_to_firebase(local_image_path, "thumbnail")
+                client.thumbnail_path = await download_image(image_url, file_name, "thumbnail")
+                if client.thumbnail_path:
+                    firebase_url = upload_to_firebase(client.thumbnail_path, "thumbnail")
                     if firebase_url:
                         client.thumbnail_url = firebase_url
                         await message.channel.send(f"Thumbnail added to firebase successfully!")
@@ -109,7 +120,7 @@ async def handle_upscale(message, image_url, file_name):
     except Exception as e:
         print(f"Error in handle_upscale: {e}")
 
-async def publish_item(message):
+async def publish_item(message, title, tags):
     try:
         # Create a custom configuration
         config = PublishConfig(
@@ -131,8 +142,8 @@ async def publish_item(message):
             message=message,
             thumbnail_url=client.thumbnail_url,
             upscaled_url=client.upscaled_url,
-            title="AI Generated",  # You might want to make this configurable
-            tags=["AI Generated"],
+            title=title,  # You might want to make this configurable
+            tags=tags,
             resolution="1632x2912"  # This matches your original aspect ratio of 9:16
         )
 
