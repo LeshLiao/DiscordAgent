@@ -82,8 +82,6 @@ def upload_to_firebase_3(local_file_path, firebase_folder):
         print(f"File uploaded successfully to Firebase Storage: {destination_blob_name}")
         print(f"Download URL: {download_url}")
 
-        safe_delete(local_file_path)
-
         return download_url
 
     except Exception as e:

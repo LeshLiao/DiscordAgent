@@ -9,7 +9,7 @@ import pyautogui
 import time
 from open_ai import ImageAnalyzer
 
-from utility import click_discord_and_imagine, download_image, upload_to_firebase_3, initialize_firebase
+from utility import click_discord_and_imagine, download_image, upload_to_firebase_3, initialize_firebase, safe_delete
 from api.wallpaper_api import WallpaperAPI, ImageItem, DownloadItem
 from api.publish_manager import PublishManager, PublishConfig  # Add this line
 
@@ -99,6 +99,8 @@ async def handle_upscale(message, image_url, file_name):
                             # Analyze the thumbnail image
                             title, tags = analyzer.analyze_image(client.thumbnail_path)
                             await publish_item(message, title, tags)
+                            safe_delete(client.upscaled_path)
+                            safe_delete(client.thumbnail_path)
                         except Exception as e:
                             await message.channel.send(f"Error analyzing image: {str(e)}")
                     else:
@@ -150,6 +152,7 @@ async def publish_item(message, title, tags):
         # Clear the URLs after successful publishing
         client.thumbnail_url = ""
         client.upscaled_url = ""
+
 
     except Exception as e:
         print(f"Error in publish_item: {e}")
