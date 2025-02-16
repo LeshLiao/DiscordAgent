@@ -34,21 +34,46 @@ class ImageAnalyzer:
 
     def _parse_response(self, response_content: str) -> Tuple[str, list]:
         """
-        Parse the JSON response from OpenAI
+        Parse the JSON response from OpenAI, handling both direct JSON and code block formats
 
         Args:
-            response_content (str): JSON response string from OpenAI
+            response_content (str): Response string from OpenAI which might be either:
+                - Direct JSON: {"name": "Title", "tags": [...]}
+                - Code block: ```json\n{"name": "Title", "tags": [...]}\n```
 
         Returns:
             Tuple[str, list]: Title and list of tags
         """
         try:
-            response_data = json.loads(response_content)
+            # First, try to clean up the response if it's in a code block
+            cleaned_content = response_content.strip()
+            if cleaned_content.startswith('```json'):
+                # Remove ```json from start and ``` from end
+                cleaned_content = cleaned_content.replace('```json', '', 1).strip()
+                if cleaned_content.endswith('```'):
+                    cleaned_content = cleaned_content[:-3].strip()
+
+            # Parse the JSON
+            response_data = json.loads(cleaned_content)
+
+            # Validate required fields
+            if 'name' not in response_data or 'tags' not in response_data:
+                raise KeyError("Response missing required 'name' or 'tags' fields")
+
+            if not isinstance(response_data['name'], str):
+                raise ValueError("'name' field must be a string")
+
+            if not isinstance(response_data['tags'], list):
+                raise ValueError("'tags' field must be a list")
+
             return response_data["name"], response_data["tags"]
+
         except json.JSONDecodeError as e:
-            raise Exception(f"Error parsing JSON response: {str(e)}")
-        except KeyError as e:
-            raise Exception(f"Missing required key in response: {str(e)}")
+            raise Exception(f"Error parsing JSON response: {str(e)}\nResponse content: {response_content}")
+        except (KeyError, ValueError) as e:
+            raise Exception(f"Invalid response format: {str(e)}\nResponse content: {response_content}")
+        except Exception as e:
+            raise Exception(f"Unexpected error parsing response: {str(e)}\nResponse content: {response_content}")
 
     def analyze_image(self, image_path: str) -> Tuple[str, list]:
         """
@@ -104,7 +129,7 @@ class ImageAnalyzer:
 if __name__ == "__main__":
     try:
         analyzer = ImageAnalyzer()
-        title, tags = analyzer.analyze_image("ignoreFolder/test.jpg")
+        title, tags = analyzer.analyze_image("output/thumbnail_816x1456_dlnx38_minimalist_a801c4d6-82d1-4232-b22e-eb0e4a467193.jpg")
         print(f"Title: {title}")
         print(f"Tags: {tags}")
     except Exception as e:

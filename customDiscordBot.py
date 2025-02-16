@@ -78,7 +78,7 @@ async def handle_upload(message, image_url):
     try:
         if image_url:
             await message.channel.send(f"Processing prompt: {image_url}")
-            click_discord_and_imagine(f"{image_url} High quality --ar 9:16 --iw 3")
+            click_discord_and_imagine(f"{image_url} minimalist --ar 9:16 --iw 3")
     except Exception as e:
         print(f"Error in handle_upload: {e}")
 
