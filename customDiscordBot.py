@@ -9,7 +9,7 @@ import pyautogui
 import time
 from open_ai import ImageAnalyzer
 
-from utility import click_discord_and_imagine, download_image, upload_to_firebase, initialize_firebase
+from utility import click_discord_and_imagine, download_image, upload_to_firebase_3, initialize_firebase
 from api.wallpaper_api import WallpaperAPI, ImageItem, DownloadItem
 from api.publish_manager import PublishManager, PublishConfig  # Add this line
 
@@ -78,7 +78,7 @@ async def handle_upload(message, image_url):
     try:
         if image_url:
             await message.channel.send(f"Processing prompt: {image_url}")
-            click_discord_and_imagine(f"{image_url} minimalist --ar 9:16 --iw 3")
+            click_discord_and_imagine(f"{image_url} mobile wallpaper --ar 9:16 --iw 3")
     except Exception as e:
         print(f"Error in handle_upload: {e}")
 
@@ -88,7 +88,7 @@ async def handle_upscale(message, image_url, file_name):
             if "- Upscaled" in message.content:
                 client.upscaled_path = await download_image(image_url, file_name, "upscaled")
                 if client.upscaled_path:
-                    firebase_url = upload_to_firebase(client.upscaled_path, "upscaled")
+                    firebase_url = upload_to_firebase_3(client.upscaled_path, "upscaled")
                     if firebase_url:
                         client.upscaled_url = firebase_url
                         await message.channel.send(f"Upscaled added to firebase successfully!")
@@ -107,7 +107,7 @@ async def handle_upscale(message, image_url, file_name):
             elif "- Image #" in message.content:
                 client.thumbnail_path = await download_image(image_url, file_name, "thumbnail")
                 if client.thumbnail_path:
-                    firebase_url = upload_to_firebase(client.thumbnail_path, "thumbnail")
+                    firebase_url = upload_to_firebase_3(client.thumbnail_path, "thumbnail")
                     if firebase_url:
                         client.thumbnail_url = firebase_url
                         await message.channel.send(f"Thumbnail added to firebase successfully!")

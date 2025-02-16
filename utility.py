@@ -38,16 +38,18 @@ def initialize_firebase():
             'storageBucket': 'palettex-37930.appspot.com'
         })
 
-def upload_to_firebase(local_file_path, firebase_folder):
+
+# when you use blob.make_public(), the URL will have no expiration
+def upload_to_firebase_3(local_file_path, firebase_folder):
     """
-    Uploads an image to Firebase Storage and returns the public URL
+    Uploads an image to Firebase Storage and returns a non-signed download URL
 
     Args:
         local_file_path (str): The local path to the image file
         firebase_folder (str): The folder name in Firebase Storage (e.g., 'thumbnail', 'upscaled')
 
     Returns:
-        str: The public URL of the uploaded file
+        str: The Firebase Storage download URL of the uploaded file
     """
     try:
         # Get bucket
@@ -58,7 +60,7 @@ def upload_to_firebase(local_file_path, firebase_folder):
         file_ext = os.path.splitext(local_file_path)[1]
 
         # Create unique filename with UTC timestamp and UUID
-        time_string = get_utc_time()  # Format: 20250213_101530_
+        time_string = get_utc_time()
         firebase_filename = f"{time_string}{firebase_folder}_{str(uuid.uuid4())}{file_ext}"
 
         # Create the full path in Firebase Storage
@@ -68,22 +70,21 @@ def upload_to_firebase(local_file_path, firebase_folder):
         blob = bucket.blob(destination_blob_name)
         blob.upload_from_filename(local_file_path)
 
-        # Make the file publicly accessible
+        # Make the blob publicly accessible
         blob.make_public()
 
-        # Get the public URL
-        public_url = blob.public_url
+        # Construct the Firebase Storage download URL
+        download_url = (
+            f"https://firebasestorage.googleapis.com/v0/b/{bucket.name}"
+            f"/o/{destination_blob_name.replace('/', '%2F')}?alt=media"
+        )
 
         print(f"File uploaded successfully to Firebase Storage: {destination_blob_name}")
+        print(f"Download URL: {download_url}")
 
-        # Clean up local file after successful upload
-        # try:
-        #     os.remove(local_file_path)
-        #     print(f"Local file deleted: {local_file_path}")
-        # except Exception as e:
-        #     print(f"Warning: Could not delete local file: {e}")
+        safe_delete(local_file_path)
 
-        return public_url
+        return download_url
 
     except Exception as e:
         print(f"Error uploading to Firebase: {e}")
@@ -96,8 +97,8 @@ async def download_image(url, filename, prefix):
             async with session.get(url, timeout=30) as response:
                 if response.status == 200:
                     # Define folders
-                    input_folder = "input"
-                    output_folder = "output"
+                    input_folder = "input"     # from discord
+                    output_folder = "output"   # converted file output
 
                     # Create directories if they don't exist
                     os.makedirs(output_folder, exist_ok=True)
@@ -138,7 +139,7 @@ async def download_image(url, filename, prefix):
                             width, height = im.size
                             resolution_name = f"{prefix}_{width}x{height}_"
                             output_path = os.path.join(output_folder, f"{resolution_name}{filename}")
-                            os.rename(input_path, output_path)
+                            os.rename(input_path, output_path) # the input_path will no longer exist after rename
 
                     return output_path  # Return the path of the saved file
 
@@ -167,3 +168,23 @@ def click_discord_and_imagine(prompt):
     pyautogui.write(prompt)
     time.sleep(1)
     pyautogui.press('enter')
+
+def safe_delete(file_path):
+    # Safely delete the local file
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            print(f"Successfully deleted local file: {file_path}")
+    except Exception as delete_error:
+        print(f"Warning: Could not delete local file {file_path}: {delete_error}")
+        # Continue execution since upload was successful
+
+# Usage example:
+if __name__ == "__main__":
+    try:
+        initialize_firebase()
+        new_url = upload_to_firebase_3("output/test.jpg", "thumbnail")
+        print("new_url=")
+        print(new_url)
+    except Exception as e:
+        print(f"utility.py Error: {str(e)}")
