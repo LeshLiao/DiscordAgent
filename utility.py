@@ -151,9 +151,12 @@ async def download_image(url, filename, prefix):
         return None
 
 def click_discord_and_imagine(prompt):
-    time.sleep(2)
+    position_x = 542
+    position_y = 658
     # Click on Discord message box
-    pyautogui.click(x=1940, y=933)
+    pyautogui.click(x=position_x, y=position_y)
+    time.sleep(1)
+    pyautogui.click(x=position_x, y=position_y)
     # Type the command
     pyautogui.write("/imagine")
     time.sleep(1)
