@@ -160,7 +160,9 @@ def click_discord_and_imagine(prompt):
     # Type the command
     pyautogui.write("/imagine")
     time.sleep(1)
-    pyautogui.press('enter')
+    pyautogui.press('space')
+    time.sleep(1)
+    pyautogui.press('space')
     time.sleep(1)
     pyautogui.write(prompt)
     time.sleep(1)
