@@ -167,6 +167,17 @@ def click_discord_and_imagine(prompt):
     time.sleep(1)
     pyautogui.press('enter')
 
+def click_specific_button():
+    # Locate the image on the screen
+    location = pyautogui.locateOnScreen('img/upscale.png', confidence=0.8)
+    if location:
+        # Get the center of the located image
+        center = pyautogui.center(location)
+        # Click the center of the image
+        pyautogui.click(center)
+    else:
+        print("Image not found on the screen.")
+
 def safe_delete(file_path):
     # Safely delete the local file
     try:
@@ -177,12 +188,18 @@ def safe_delete(file_path):
         print(f"Warning: Could not delete local file {file_path}: {delete_error}")
         # Continue execution since upload was successful
 
+
 # Usage example:
 if __name__ == "__main__":
-    try:
-        initialize_firebase()
-        new_url = upload_to_firebase_3("output/test.jpg", "thumbnail")
-        print("new_url=")
-        print(new_url)
-    except Exception as e:
-        print(f"utility.py Error: {str(e)}")
+
+    # Test upload to firebase
+    # try:
+    #     initialize_firebase()
+    #     new_url = upload_to_firebase_3("output/test.jpg", "thumbnail")
+    #     print("new_url=")
+    #     print(new_url)
+    # except Exception as e:
+    #     print(f"utility.py Error: {str(e)}")
+
+    # Test click button
+    click_specific_button()

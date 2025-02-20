@@ -49,5 +49,13 @@ deactivate
 ## Generate requirements.txt
 
 ```bash
-pip3 freeze > requirements.txt
+# On Ubuntu/Debian:
+pip3 freeze > python_requirements/linux/requirements.txt
+    # remove mac dependencies
+    -pyobjc-core==11.0
+    -pyobjc-framework-Cocoa==11.0
+    -pyobjc-framework-Quartz==11.0
+
+# On macOS:
+pip3 freeze > python_requirements/mac_os/requirements.txt
 ```
