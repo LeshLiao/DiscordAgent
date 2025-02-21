@@ -9,9 +9,10 @@ import pyautogui
 import time
 from open_ai import ImageAnalyzer
 
-from utility import click_discord_and_imagine, download_image, upload_to_firebase_3, initialize_firebase, safe_delete
+from utility import click_discord_and_imagine, download_image, upload_to_firebase_3, initialize_firebase, safe_delete, click_somewhere
 from api.wallpaper_api import WallpaperAPI, ImageItem, DownloadItem
 from api.publish_manager import PublishManager, PublishConfig  # Add this line
+from image_url_detection import is_image_url
 
 load_dotenv()
 discord_token = os.getenv('DISCORD_TOKEN')
@@ -74,19 +75,30 @@ class CustomBot(commands.Bot):
 
 client = CustomBot()
 
-async def handle_upload(message, image_url):
+async def handle_upload(message, attach_image_url):
+    prompt_string = "mobile wallpaper --ar 9:16 --iw 3"
     try:
-        if image_url:
-            await message.channel.send(f"Processing prompt: {image_url}")
-            click_discord_and_imagine(f"{image_url} mobile wallpaper --ar 9:16 --iw 3")
+        if attach_image_url:
+            await message.channel.send(f"Processing prompt: {attach_image_url}")
+            click_discord_and_imagine(f"{attach_image_url} " + prompt_string)
+        else:
+            print("message=============================")
+            print(message.content)
+            is_image, content_type = is_image_url(message.content)
+            print(is_image)
+            if is_image:
+                image_url = message.content
+                await message.channel.send(f"Processing prompt: {image_url}")
+                click_discord_and_imagine(f"{image_url} " + prompt_string)
+
     except Exception as e:
         print(f"Error in handle_upload: {e}")
 
-async def handle_upscale(message, image_url, file_name):
+async def handle_upscale(message, attach_image_url, file_name):
     try:
         if file_name.lower().endswith((".png", ".jpg", ".jpeg", ".gif")):
             if "- Upscaled" in message.content:
-                client.upscaled_path = await download_image(image_url, file_name, "upscaled")
+                client.upscaled_path = await download_image(attach_image_url, file_name, "upscaled")
                 if client.upscaled_path:
                     firebase_url = upload_to_firebase_3(client.upscaled_path, "upscaled")
                     if firebase_url:
@@ -107,14 +119,20 @@ async def handle_upscale(message, image_url, file_name):
                         await message.channel.send("Failed to upload upscaled image to Firebase")
 
             elif "- Image #" in message.content:
-                client.thumbnail_path = await download_image(image_url, file_name, "thumbnail")
+                client.thumbnail_path = await download_image(attach_image_url, file_name, "thumbnail")
                 if client.thumbnail_path:
                     firebase_url = upload_to_firebase_3(client.thumbnail_path, "thumbnail")
                     if firebase_url:
                         client.thumbnail_url = firebase_url
                         await message.channel.send(f"Thumbnail added to firebase successfully!")
+                        print("click upscale button...")
+                        click_somewhere("img/upscale.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
                     else:
                         await message.channel.send("Failed to upload thumbnail to Firebase")
+            elif "- <@" in message.content and "discordapp" in attach_image_url:
+                print("click U4 option...")
+                click_somewhere("img/u4.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
+
         else:
             print(f"Message:")
             print(message.content)
@@ -163,8 +181,8 @@ async def on_message(message):
     try:
         channel_name = message.channel.name
         print(f"\n===== message (channel: {channel_name}) =====")
-        print(" - message:")
-        print(message)
+        #print(" - message:")
+        #print(message)
         print(" - message.content:")
         print(message.content)
         print(" - message.attachments:")
@@ -175,17 +193,17 @@ async def on_message(message):
         # if message.author == client.user:
         #     return
 
-        image_url = ""
+        attach_image_url = ""
         file_name = ""
         for attachment in message.attachments:
-            image_url = attachment.url
+            attach_image_url = attachment.url
             file_name= attachment.filename
             break
 
         if channel_name == "upload":
-            await handle_upload(message, image_url)
+            await handle_upload(message, attach_image_url)
         elif channel_name == "upscale":
-            await handle_upscale(message, image_url, file_name)
+            await handle_upscale(message, attach_image_url, file_name)
         # elif channel_name == "publish":
         #     await handle_publish(message)
 

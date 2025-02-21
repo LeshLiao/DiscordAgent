@@ -9,6 +9,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 import uuid
 import pytz
+import platform
 
 # Load environment variables
 load_dotenv()
@@ -150,12 +151,14 @@ async def download_image(url, filename, prefix):
         return None
 
 def click_discord_and_imagine(prompt):
-    position_x = 542
-    position_y = 658
+    # position_x = 542
+    # position_y = 658
+    click_somewhere("img/Message_upscale_textbox.png", 1, 2)
+
     # Click on Discord message box
-    pyautogui.click(x=position_x, y=position_y)
-    time.sleep(1)
-    pyautogui.click(x=position_x, y=position_y)
+    # pyautogui.click(x=position_x, y=position_y)
+    # time.sleep(1)
+    # pyautogui.click(x=position_x, y=position_y)
     # Type the command
     pyautogui.write("/imagine")
     time.sleep(1)
@@ -167,17 +170,6 @@ def click_discord_and_imagine(prompt):
     time.sleep(1)
     pyautogui.press('enter')
 
-def click_specific_button():
-    # Locate the image on the screen
-    location = pyautogui.locateOnScreen('img/upscale.png', confidence=0.8)
-    if location:
-        # Get the center of the located image
-        center = pyautogui.center(location)
-        # Click the center of the image
-        pyautogui.click(center)
-    else:
-        print("Image not found on the screen.")
-
 def safe_delete(file_path):
     # Safely delete the local file
     try:
@@ -188,6 +180,84 @@ def safe_delete(file_path):
         print(f"Warning: Could not delete local file {file_path}: {delete_error}")
         # Continue execution since upload was successful
 
+def click_somewhere(image_file, interval_seconds=1, repeat=1, retry=2, retry_interval=1):
+    """
+    Locate an image on screen and click on it, with proper handling for MacOS Retina displays.
+    Will retry finding the image if not found on first attempt.
+
+    Args:
+        image_file (str): Path to the image file to locate on screen
+        interval_seconds (float): Time to wait between clicks in seconds
+        repeat (int): Number of times to click the image
+        retry (int): Number of times to retry finding the image if not found
+        retry_interval (float): Time to wait between retries in seconds
+
+    Returns:
+        bool: True if image was found and clicked, False otherwise
+    """
+    print(f"click_somewhere( {image_file}, interval={interval_seconds}s, repeat={repeat}x, retry={retry}x )")
+
+    # Retry loop
+    for attempt in range(retry + 1):  # +1 because first attempt is not a retry
+        try:
+            if attempt > 0:
+                print(f"Retry attempt {attempt}/{retry} for finding image: {image_file}")
+                time.sleep(retry_interval)  # Wait before retrying
+
+                for i in range(repeat):
+                    time.sleep(interval_seconds)
+                    # Locate the image on the screen
+                    location = pyautogui.locateOnScreen(image_file, confidence=0.8)
+
+                    if location:
+                        print(f"Image found on attempt {attempt + 1}!")
+                        # Get the center of the located image
+                        center = pyautogui.center(location)
+
+                        # Check if running on MacOS (for Retina display adjustment)
+                        if is_macos():
+                            # Adjust for Retina display by dividing coordinates by 2
+                            click_x, click_y = center[0] / 2, center[1] / 2
+                            print(f"MacOS detected - Using adjusted coordinates: ({click_x}, {click_y})")
+                        else:
+                            # Use original coordinates on non-MacOS systems
+                            click_x, click_y = center[0], center[1]
+                            print(f"Using original coordinates: ({click_x}, {click_y})")
+
+                        # Click the center of the image
+                        pyautogui.click(x=click_x, y=click_y)
+
+                return True
+
+            # If we've tried all attempts and still haven't found the image
+            if attempt == retry:
+                print(f"Image not found after {retry + 1} attempts: {image_file}")
+                return False
+
+        except Exception as e:
+            print(f"Error in click_somewhere (attempt {attempt + 1}): {str(e)}")
+            import traceback
+            traceback.print_exc()
+
+            # If this was our last retry attempt, return False
+            if attempt == retry:
+                return False
+
+            # Otherwise continue to the next retry attempt
+            print(f"Retrying due to error...")
+
+    # This should never be reached, but just in case
+    return False
+
+def is_macos():
+    """
+    Detects if the current operating system is MacOS.
+
+    Returns:
+        bool: True if the current OS is MacOS, False otherwise
+    """
+    system = platform.system()
+    return system == "Darwin"  # MacOS reports as "Darwin" in platform.system()
 
 # Usage example:
 if __name__ == "__main__":
@@ -202,4 +272,11 @@ if __name__ == "__main__":
     #     print(f"utility.py Error: {str(e)}")
 
     # Test click button
-    click_specific_button()
+    # click_somewhere("img/Message_upscale_textbox.png")
+    click_somewhere("img/mongodb.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
+
+    # Detection current OS
+    # if is_macos():
+    #     print("Running on MacOS")
+    # else:
+    #     print(f"Not running on MacOS. Current OS: {platform.system()}")
