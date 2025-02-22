@@ -103,7 +103,7 @@ class PublishManager:
 
             # Handle the response
             response_text = str(result)
-            if "Successful" in response_text and "itemId=" in response_text:
+            if "successful" in response_text and "itemId=" in response_text:
                 # Extract itemId from success message
                 new_item_id = response_text.split("itemId=")[-1]
                 await message.channel.send(f"✅ Item published successfully!\nItem ID: {new_item_id}")

@@ -127,3 +127,94 @@ class WallpaperAPI:
     def delete_wallpaper(self, item_id: str) -> Dict[str, Union[bool, str]]:
         """Delete a wallpaper"""
         return self._make_request("DELETE", f"/api/items/{item_id}")
+
+    def add_waiting_item(
+        self,
+        source: str,
+        url: str,
+        priority: int = 0,
+        note: str = "",
+        assign: str = "",
+        status: str = ""
+    ) -> Dict[str, Union[bool, str]]:
+        """
+        Add a new item to the waiting list.
+
+        Args:
+            source: Source of the item (e.g., 'wallpaper website').
+            url: URL of the item.
+            priority: Priority level of the item (default is 0).
+            note: Additional notes about the item (default is an empty string).
+            assign: Assignment information (default is an empty string).
+            status: Status of the item (default is an empty string).
+
+        Returns:
+            Dictionary with status and message.
+        """
+        payload = {
+            "source": source,
+            "url": url,
+            "priority": priority,
+            "note": note,
+            "assign": assign,
+            "status": status
+        }
+
+        return self._make_request("POST", "/api/items/waiting", payload)
+
+    def get_one_from_waiting_list(self, assign: str = "midjourney") -> Dict[str, Union[bool, str, dict]]:
+        """
+        Get one item from the waiting list for a specific assignment.
+
+        Args:
+            assign: The assignment type to filter by (default is "midjourney").
+
+        Returns:
+            Dictionary containing:
+            - success: Boolean indicating if the request was successful
+            - message: Response message or error
+            - data: If successful, contains item data with '_id' and 'url'
+        """
+        response = self._make_request("GET", f"/api/items/waiting/{assign}")
+
+        if response["success"]:
+            try:
+                # Parse the JSON response
+                data = json.loads(response["message"])
+
+                # Extract only the _id and url fields
+                result = {
+                    "success": True,
+                    "data": {
+                        "_id": data.get("_id"),
+                        "url": data.get("url")
+                    }
+                }
+                return result
+            except json.JSONDecodeError:
+                return {
+                    "success": False,
+                    "message": "Failed to parse response JSON"
+                }
+            except KeyError as e:
+                return {
+                    "success": False,
+                    "message": f"Missing expected field in response: {str(e)}"
+                }
+
+        return response
+
+    def complete_waiting_list_item(self, _id: str) -> Dict[str, Union[bool, str, dict]]:
+        """
+        Mark a waiting list item as completed.
+
+        Args:
+            _id: The ID of the item to mark as completed
+
+        Returns:
+            Dictionary containing:
+            - success: Boolean indicating if the request was successful
+            - message: Response message or error data
+            If successful, message will contain the updated item data
+        """
+        return self._make_request("PATCH", f"/api/items/waiting/{_id}")

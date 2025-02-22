@@ -7,15 +7,18 @@ from PIL import Image
 import os
 import pyautogui
 import time
+import argparse
 from open_ai import ImageAnalyzer
 
 from utility import click_discord_and_imagine, download_image, upload_to_firebase_3, initialize_firebase, safe_delete, click_somewhere
 from api.wallpaper_api import WallpaperAPI, ImageItem, DownloadItem
 from api.publish_manager import PublishManager, PublishConfig  # Add this line
 from image_url_detection import is_image_url
+from sendMessage import send_message
 
 load_dotenv()
 discord_token = os.getenv('DISCORD_TOKEN')
+CHANNEL_ID = "1338067894780559410"  # channel ID (#upload)
 
 directory = os.getcwd()
 print(directory)
@@ -35,6 +38,9 @@ class CustomBot(commands.Bot):
         self.upscaled_path = ""
         self.thumbnail_url = ""
         self.upscaled_url = ""
+        self.waiting_id = ""
+        self.auto_mode = False
+        print("CustomBot init")
         initialize_firebase()
 
     async def cleanup(self):
@@ -51,6 +57,9 @@ class CustomBot(commands.Bot):
         print(f"Bot connected as {self.user.name}")
         print(f"Bot ID: {self.user.id}")
         self.reconnect_attempts = 0
+
+        if client.auto_mode:
+            await check_waiting_list() # GET: url from waiting list
 
     async def on_connect(self):
         print("Bot successfully connected to Discord")
@@ -110,9 +119,25 @@ async def handle_upscale(message, attach_image_url, file_name):
                         try:
                             # Analyze the thumbnail image
                             title, tags = analyzer.analyze_image(client.thumbnail_path)
-                            await publish_item(message, title, tags)
+                            is_success = await publish_item(message, title, tags)
                             safe_delete(client.upscaled_path)
                             safe_delete(client.thumbnail_path)
+                            if is_success:
+                                api_client = WallpaperAPI()
+                                api_client.complete_waiting_list_item(client.waiting_id)
+
+                                # Clear the URLs after successful publishing
+                                client.thumbnail_url = ""
+                                client.upscaled_url = ""
+                                client.waiting_id = ""
+
+                                # GET next url from waiting list
+                                await check_waiting_list()
+                            else:
+                                print("Publish item failed! Stop auto mode!")
+
+
+
                         except Exception as e:
                             await message.channel.send(f"Error analyzing image: {str(e)}")
                     else:
@@ -158,7 +183,7 @@ async def publish_item(message, title, tags):
             return
 
         # Publish the item with actual URLs from the bot's state
-        await publisher.publish(
+        is_success = await publisher.publish(
             message=message,
             thumbnail_url=client.thumbnail_url,
             upscaled_url=client.upscaled_url,
@@ -166,10 +191,7 @@ async def publish_item(message, title, tags):
             tags=tags,
             resolution="1632x2912"  # This matches your original aspect ratio of 9:16
         )
-
-        # Clear the URLs after successful publishing
-        client.thumbnail_url = ""
-        client.upscaled_url = ""
+        return is_success
 
 
     except Exception as e:
@@ -185,9 +207,9 @@ async def on_message(message):
         #print(message)
         print(" - message.content:")
         print(message.content)
-        print(" - message.attachments:")
-        print(message.attachments)
-        print("\n")
+        #print(" - message.attachments:")
+        #print(message.attachments)
+        #print("\n")
 
         # filter user
         # if message.author == client.user:
@@ -241,7 +263,48 @@ async def shutdown():
     await client.cleanup()
     print("Shutdown complete.")
 
+async def check_waiting_list():
+    api_client = WallpaperAPI()
+    response = api_client.get_one_from_waiting_list(assign="midjourney")
+
+    # Check if the request was successful
+    if response["success"]:
+        # Access the extracted data
+        _id = response["data"]["_id"]
+        url = response["data"]["url"]
+        client.waiting_id = _id
+
+        print(f"GET one item from waiting list!")
+        print(f"_id: {_id}")
+        print(f"url: {url}")
+
+        # Get the channel and send the message directly
+        try:
+            channel = client.get_channel(int(CHANNEL_ID))
+            if channel:
+                await channel.send(url)
+                print(f"url sent to #upload channel...")
+            else:
+                print(f"Error: Channel with ID {CHANNEL_ID} not found")
+        except Exception as e:
+            print(f"Error sending message: {e}")
+    else:
+        # Handle error case
+        print(f"Error: {response['message']}")
+
 if __name__ == "__main__":
+    # Set up argument parser
+    parser = argparse.ArgumentParser(description='Discord Bot Runner')
+    parser.add_argument('-auto', '--automatic', action='store_true',
+                        help='Run the bot in automatic mode')
+    args = parser.parse_args()
+
+    if args.automatic:
+        print("Auto mode!")
+        client.auto_mode = True
+    else:
+        print("Normal mode!")
+
     try:
         asyncio.run(main())
     except KeyboardInterrupt:

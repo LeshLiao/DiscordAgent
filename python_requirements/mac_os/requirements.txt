@@ -40,6 +40,7 @@ multidict==6.1.0
 numpy==2.2.3
 openai==1.63.0
 opencv-python==4.11.0.86
+pexels-api==1.0.1
 pillow==11.1.0
 propcache==0.2.1
 proto-plus==1.26.0
