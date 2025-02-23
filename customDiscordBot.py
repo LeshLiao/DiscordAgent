@@ -160,9 +160,9 @@ async def handle_upscale(message, attach_image_url, file_name):
                         await message.channel.send(f"Thumbnail added to firebase successfully!")
                         print("click upscale button...")
                         if is_macos():
-                            click_somewhere("img/mac/upscale_subtle.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
+                            click_somewhere("img/mac/upscale_subtle.png",interval_seconds = 5, repeat = 1, retry= 3, retry_interval = 2)
                         else:
-                            click_somewhere("img/linux/upscale_subtle.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
+                            click_somewhere("img/linux/upscale_subtle.png",interval_seconds = 5, repeat = 1, retry= 3, retry_interval = 2)
                     else:
                         await message.channel.send("Failed to upload thumbnail to Firebase")
             elif "- <@" in message.content and "discordapp" in attach_image_url:
