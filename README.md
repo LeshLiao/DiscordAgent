@@ -21,11 +21,11 @@ python3 -m venv venv
 
 # On macOS:
 source venv/bin/activate
-pip3 install -r mac_os/requirements.txt
+pip3 install -r python_requirements/mac_os/requirements.txt
 
 # On Ubuntu/Debian
 source venv/bin/activate
-pip3 install -r linux/requirements.txt
+pip3 install -r python_requirements/linux/requirements.txt
 
 # setup .env file
 touch .env
@@ -38,6 +38,8 @@ python3 find_position.py
 
 # Let's Go!
 python3 customDiscordBot.py
+# Auto generate image work flow
+python3 customDiscordBot.py -auto
 ```
 
 ## To exit the virtual environment, simply run
@@ -58,4 +60,13 @@ pip3 freeze > python_requirements/linux/requirements.txt
 
 # On macOS:
 pip3 freeze > python_requirements/mac_os/requirements.txt
+```
+
+## pi command:
+
+```bash
+# Screenshot on pi
+scrot
+
+# Menu->Graphics->ImageMagick
 ```

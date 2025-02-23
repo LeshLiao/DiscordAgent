@@ -150,15 +150,7 @@ async def download_image(url, filename, prefix):
         print(f"Error in download_image: {e}")
         return None
 
-def click_discord_and_imagine(prompt):
-    # position_x = 542
-    # position_y = 658
-    click_somewhere("img/Message_upscale_textbox.png", 1, 2)
-
-    # Click on Discord message box
-    # pyautogui.click(x=position_x, y=position_y)
-    # time.sleep(1)
-    # pyautogui.click(x=position_x, y=position_y)
+def type_imagine(prompt):
     # Type the command
     pyautogui.write("/imagine")
     time.sleep(1)

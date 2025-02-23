@@ -10,7 +10,7 @@ import time
 import argparse
 from open_ai import ImageAnalyzer
 
-from utility import click_discord_and_imagine, download_image, upload_to_firebase_3, initialize_firebase, safe_delete, click_somewhere
+from utility import type_imagine, download_image, upload_to_firebase_3, initialize_firebase, safe_delete, click_somewhere, is_macos
 from api.wallpaper_api import WallpaperAPI, ImageItem, DownloadItem
 from api.publish_manager import PublishManager, PublishConfig  # Add this line
 from image_url_detection import is_image_url
@@ -89,7 +89,11 @@ async def handle_upload(message, attach_image_url):
     try:
         if attach_image_url:
             await message.channel.send(f"Processing prompt: {attach_image_url}")
-            click_discord_and_imagine(f"{attach_image_url} " + prompt_string)
+            if is_macos():
+                click_somewhere("img/mac/message_upscale_textbox.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
+            else:
+                click_somewhere("img/linux/message_upscale_textbox.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
+            type_imagine(f"{attach_image_url} " + prompt_string)
         else:
             print("message=============================")
             print(message.content)
@@ -98,7 +102,11 @@ async def handle_upload(message, attach_image_url):
             if is_image:
                 image_url = message.content
                 await message.channel.send(f"Processing prompt: {image_url}")
-                click_discord_and_imagine(f"{image_url} " + prompt_string)
+                if is_macos():
+                    click_somewhere("img/mac/message_upscale_textbox.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
+                else:
+                    click_somewhere("img/linux/message_upscale_textbox.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
+                type_imagine(f"{image_url} " + prompt_string)
 
     except Exception as e:
         print(f"Error in handle_upload: {e}")
@@ -151,12 +159,18 @@ async def handle_upscale(message, attach_image_url, file_name):
                         client.thumbnail_url = firebase_url
                         await message.channel.send(f"Thumbnail added to firebase successfully!")
                         print("click upscale button...")
-                        click_somewhere("img/upscale.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
+                        if is_macos():
+                            click_somewhere("img/mac/upscale_subtle.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
+                        else:
+                            click_somewhere("img/linux/upscale_subtle.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
                     else:
                         await message.channel.send("Failed to upload thumbnail to Firebase")
             elif "- <@" in message.content and "discordapp" in attach_image_url:
                 print("click U4 option...")
-                click_somewhere("img/u4.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
+                if is_macos():
+                    click_somewhere("img/mac/u4.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
+                else:
+                    click_somewhere("img/linux/u4.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
 
         else:
             print(f"Message:")
