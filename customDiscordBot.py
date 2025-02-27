@@ -37,7 +37,9 @@ class CustomBot(commands.Bot):
         self.thumbnail_path = ""
         self.upscaled_path = ""
         self.thumbnail_url = ""
+        self.thumbnail_blob = ""
         self.upscaled_url = ""
+        self.upscaled_blob = ""
         self.waiting_id = ""
         self.auto_mode = False
         print("CustomBot init")
@@ -95,8 +97,6 @@ async def handle_upload(message, attach_image_url):
                 click_somewhere("img/linux/message_upscale_textbox.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
             type_imagine(f"{attach_image_url} " + prompt_string)
         else:
-            print("message=============================")
-            print(message.content)
             is_image, content_type = is_image_url(message.content)
             print(is_image)
             if is_image:
@@ -117,9 +117,10 @@ async def handle_upscale(message, attach_image_url, file_name):
             if "- Upscaled" in message.content:
                 client.upscaled_path = await download_image(attach_image_url, file_name, "upscaled")
                 if client.upscaled_path:
-                    firebase_url = upload_to_firebase_3(client.upscaled_path, "upscaled")
+                    firebase_url, blob_name = upload_to_firebase_3(client.upscaled_path, "upscaled")
                     if firebase_url:
                         client.upscaled_url = firebase_url
+                        client.upscaled_blob = blob_name
                         await message.channel.send(f"Upscaled added to firebase successfully!")
 
                         # Initialize the image analyzer
@@ -127,12 +128,12 @@ async def handle_upscale(message, attach_image_url, file_name):
                         try:
                             # Analyze the thumbnail image
                             title, tags = analyzer.analyze_image(client.thumbnail_path)
-                            is_success = await publish_item(message, title, tags)
+                            new_itemId = await publish_item(message, title, tags)
                             safe_delete(client.upscaled_path)
                             safe_delete(client.thumbnail_path)
-                            if is_success:
+                            if new_itemId != "":
                                 api_client = WallpaperAPI()
-                                api_client.complete_waiting_list_item(client.waiting_id)
+                                api_client.complete_waiting_list_item(client.waiting_id, new_itemId, client.thumbnail_url)
 
                                 # Clear the URLs after successful publishing
                                 client.thumbnail_url = ""
@@ -154,9 +155,10 @@ async def handle_upscale(message, attach_image_url, file_name):
             elif "- Image #" in message.content:
                 client.thumbnail_path = await download_image(attach_image_url, file_name, "thumbnail")
                 if client.thumbnail_path:
-                    firebase_url = upload_to_firebase_3(client.thumbnail_path, "thumbnail")
+                    firebase_url, blob_name = upload_to_firebase_3(client.thumbnail_path, "thumbnail")
                     if firebase_url:
                         client.thumbnail_url = firebase_url
+                        client.thumbnail_blob = blob_name
                         await message.channel.send(f"Thumbnail added to firebase successfully!")
                         print("click upscale button...")
                         if is_macos():
@@ -197,15 +199,17 @@ async def publish_item(message, title, tags):
             return
 
         # Publish the item with actual URLs from the bot's state
-        is_success = await publisher.publish(
+        new_itemId = await publisher.publish(
             message=message,
             thumbnail_url=client.thumbnail_url,
+            thumbnail_blob=client.thumbnail_blob,
             upscaled_url=client.upscaled_url,
+            upscaled_blob=client.upscaled_blob,
             title=title,  # You might want to make this configurable
             tags=tags,
             resolution="1632x2912"  # This matches your original aspect ratio of 9:16
         )
-        return is_success
+        return new_itemId
 
 
     except Exception as e:

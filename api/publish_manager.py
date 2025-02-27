@@ -33,9 +33,16 @@ class PublishManager:
             image_list.append(ImageItem(type="large", name="large.jpg"))
         return image_list
 
-    def _create_download_list(self, url: str, resolution: str, ext: str = "jpg") -> List[DownloadItem]:
+    def _create_download_list(self,
+                              url: str,
+                              resolution: str,
+                              ext: str,
+                              caption: str,
+                              thumbnail_blob: str,
+                              upscaled_blob: str
+        ) -> List[DownloadItem]:
         """Create download list with given parameters"""
-        return [DownloadItem(size=resolution, ext=ext, link=url)]
+        return [DownloadItem(size=resolution, ext=ext, link=url, caption=caption, thumbnail_blob=thumbnail_blob,upscaled_blob=upscaled_blob)]
 
     async def publish(
         self,
@@ -45,13 +52,16 @@ class PublishManager:
         title: str,
         tags: List[str],
         resolution: str = "1632x2912",
+        caption: str = "HD",
+        thumbnail_blob: str = "",
+        upscaled_blob: str = "",
         item_id: Optional[str] = None,
         price: Optional[float] = None,
         stars: Optional[int] = None,
         photo_type: Optional[str] = None,
         free_download: Optional[bool] = None,
         preview: Optional[str] = None,
-    ) -> bool:
+    ) -> str:
         """
         Publish a new wallpaper item
 
@@ -83,7 +93,7 @@ class PublishManager:
 
             # Create image and download lists
             image_list = self._create_image_list()
-            download_list = self._create_download_list(upscaled_url, resolution)
+            download_list = self._create_download_list(upscaled_url, resolution, "jpg", caption, thumbnail_blob, upscaled_blob)
 
             # Add wallpaper through API
             result = self.api.add_wallpaper(
@@ -100,17 +110,16 @@ class PublishManager:
                 image_list=image_list,
                 download_list=download_list
             )
+            print("result=")
+            print(result)
 
-            # Handle the response
-            response_text = str(result)
-            if "successful" in response_text and "itemId=" in response_text:
-                # Extract itemId from success message
-                new_item_id = response_text.split("itemId=")[-1]
+            if result.get('success'):
+                new_item_id = result.get('message')
                 await message.channel.send(f"✅ Item published successfully!\nItem ID: {new_item_id}")
-                return True
+                return new_item_id
             else:
-                await message.channel.send(f"❌ Failed to add the item: {response_text}")
-                return False
+                await message.channel.send(f"❌ Failed to add the item: {result.get('message')}")
+                return ""
 
         except Exception as e:
             await message.channel.send(f"Error during publication: {str(e)}")

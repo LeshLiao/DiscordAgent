@@ -13,6 +13,9 @@ class DownloadItem:
     size: str
     ext: str
     link: str
+    caption: str
+    thumbnail_blob: str
+    upscaled_blob: str
 
 class WallpaperAPI:
     def __init__(self, base_url: str = "https://online-store-service.onrender.com"):
@@ -107,7 +110,7 @@ class WallpaperAPI:
             "thumbnail": thumbnail,
             "preview": preview,
             "imageList": [{"type": img.type, "name": img.name} for img in image_list],
-            "downloadList": [{"size": dl.size, "ext": dl.ext, "link": dl.link} for dl in download_list]
+            "downloadList": [{"size": dl.size, "ext": dl.ext, "link": dl.link, "caption": dl.caption, "thumbnail_blob": dl.thumbnail_blob, "upscaled_blob": dl.upscaled_blob} for dl in download_list]
         }
 
         return self._make_request("POST", "/api/items", payload)
@@ -204,17 +207,36 @@ class WallpaperAPI:
 
         return response
 
-    def complete_waiting_list_item(self, _id: str) -> Dict[str, Union[bool, str, dict]]:
+    def complete_waiting_list_item(
+        self, _id: str,
+        new_itemId: str,
+        new_itemUrl: str,
+        priority: int = 0,
+        status: str = "Completed",
+        review: bool = False
+    ) -> Dict[str, Union[bool, str, dict]]:
         """
-        Mark a waiting list item as completed.
+        Mark a waiting list item as completed with additional parameters.
 
         Args:
             _id: The ID of the item to mark as completed
+            new_itemId: The new item ID to associate with the completed waiting list item
+            new_itemUrl: The URL of the new item
+            priority: Priority level (default is 0)
+            status: Status of the item (default is "Completed")
+            review: Whether the item needs review (default is False)
 
         Returns:
             Dictionary containing:
             - success: Boolean indicating if the request was successful
             - message: Response message or error data
-            If successful, message will contain the updated item data
         """
-        return self._make_request("PATCH", f"/api/items/waiting/{_id}")
+        payload = {
+            "itemId": new_itemId,
+            "itemUrl": new_itemUrl,
+            "priority": priority,
+            "status": status,
+            "review": review
+        }
+
+        return self._make_request("PATCH", f"/api/items/waiting/{_id}", payload)

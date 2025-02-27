@@ -83,11 +83,11 @@ def upload_to_firebase_3(local_file_path, firebase_folder):
         print(f"File uploaded successfully to Firebase Storage: {destination_blob_name}")
         print(f"Download URL: {download_url}")
 
-        return download_url
+        return download_url, destination_blob_name
 
     except Exception as e:
-        print(f"Error uploading to Firebase: {e}")
-        return None
+        print(f"Error upload_to_firebase_3(): {e}")
+        return None, None  # Return both values as None instead of just None
 
 
 async def download_image(url, filename, prefix):
@@ -265,10 +265,14 @@ if __name__ == "__main__":
 
     # Test click button
     # click_somewhere("img/Message_upscale_textbox.png")
+
     click_somewhere("img/mongodb.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
+
+
 
     # Detection current OS
     # if is_macos():
     #     print("Running on MacOS")
     # else:
     #     print(f"Not running on MacOS. Current OS: {platform.system()}")
+
