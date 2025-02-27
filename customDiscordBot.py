@@ -311,6 +311,12 @@ async def check_waiting_list():
         print(f"Error: {response['message']}")
 
 if __name__ == "__main__":
+    # Hint
+    print("=== Please Check you python venv first ===")
+    print("COMMAND: source venv/bin/activate")
+    print("COMMAND: deactivate")
+    print("COMMAND: python3 customDiscordBot.py -auto")
+
     # Set up argument parser
     parser = argparse.ArgumentParser(description='Discord Bot Runner')
     parser.add_argument('-auto', '--automatic', action='store_true',
