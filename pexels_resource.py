@@ -24,10 +24,10 @@ def testFunction(api_key):
 
 
 # Document: https://www.pexels.com/api/documentation/#photos-search
-def printImageUrl(api_key):
-    query = 'nature'
+def printImageUrl(api_key, query_text, current_page):
+    query = query_text
     per_page = 80 # max 80
-    page = 1
+    page = current_page
     url = f'https://api.pexels.com/v1/search?query={query}&per_page={per_page}&page={page}'
 
     temp_note = f"search?query={query}&per_page={per_page}&page={page}"
@@ -39,6 +39,7 @@ def printImageUrl(api_key):
     response = requests.get(url, headers=headers)
 
     if response.status_code == 200:
+        add_one_count = 0
         data = response.json()
         photos = data.get('photos', [])
         for photo in photos:
@@ -49,17 +50,23 @@ def printImageUrl(api_key):
                 if original_url:
                     print(original_url)
                     add_one("pexels.com API", temp_note, original_url)
+                    add_one_count = add_one_count + 1
     else:
         print(f'Error: {response.status_code}')
-
+    print("\n Total added:" + str(add_one_count) + "\n")
 
 def add_one(source, note, url):
     # Add a new item to the waiting list
     response = api_client.add_waiting_item(
         source=source,
+        note=note,
         url=url,
         priority=0,
-        note=note,
+        assign="",
+        status="",
+        itemId="",
+        itemUrl="",
+        review=False
     )
 
     # Check the response
@@ -78,9 +85,9 @@ if __name__ == "__main__":
         print("Error: PEXELS_COM_API not found in environment variables")
         exit(1)
 
-    # testFunction(api_key)
-    printImageUrl(api_key)
-
-    # Initialize the API client
-    # api_client = WallpaperAPI()
-
+    # printImageUrl(api_key, 'nature', 1)     # 20250228 added to waiting list (28)
+    # printImageUrl(api_key, 'nature', 2)     # 20250228 added to waiting list (26)
+    # printImageUrl(api_key, 'nature', 3)     # 20250228 added to waiting list (31)
+    # printImageUrl(api_key, 'nature', 4)     # 20250228 added to waiting list (19)
+    # printImageUrl(api_key, 'nature', 5)     # 20250228 added to waiting list (34)
+    # printImageUrl(api_key, 'nature', 6)     # 20250228 added to waiting list (31)

@@ -134,11 +134,14 @@ class WallpaperAPI:
     def add_waiting_item(
         self,
         source: str,
-        url: str,
-        priority: int = 0,
         note: str = "",
+        url: str = "",
+        priority: int = 0,
         assign: str = "",
-        status: str = ""
+        status: str = "",
+        itemId: str = "",
+        itemUrl: str = "",
+        review: bool = False
     ) -> Dict[str, Union[bool, str]]:
         """
         Add a new item to the waiting list.
@@ -156,11 +159,14 @@ class WallpaperAPI:
         """
         payload = {
             "source": source,
+            "note": note,
             "url": url,
             "priority": priority,
-            "note": note,
             "assign": assign,
-            "status": status
+            "status": status,
+            "itemId": itemId,
+            "itemUrl": itemUrl,
+            "review": review,
         }
 
         return self._make_request("POST", "/api/items/waiting", payload)
