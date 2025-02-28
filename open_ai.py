@@ -102,7 +102,7 @@ class ImageAnalyzer:
                         "content": [
                             {
                                 "type": "text",
-                                "text": 'Please provide a title for the attached image, and give it some image tags. (1) A descriptive title for the image. (2) A list of relevant tags, including general descriptors and the two main colors in hexadecimal format with their respective coverage percentages (from 1% to 100%), appended to the color hex code. please return as a json format, here is a response example: {"name": "Twilight over the Bay Bridge","tags": ["Landscape","Cityscape","Bridge","Skyline","#8B008B%045","#4682B4%020"]}'
+                                "text": 'Please provide a title for the attached image, and give it some image tags. (1) A descriptive title for the image. (2) please incorporate the following popular tags when relevant: "landscape", "nature" "minimalistic" "Anime" and "space" , including general descriptors and the two main colors in hexadecimal format with their respective coverage percentages (from 1% to 100%), appended to the color hex code. please return as a json format, here is a response example: {"name": "Twilight over the Bay Bridge","tags": ["nature","bridge","skyline","#8B008B%045","#4682B4%020"]}'
                             },
                             {
                                 "type": "image_url",
