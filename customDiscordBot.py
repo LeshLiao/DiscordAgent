@@ -159,8 +159,8 @@ async def handle_upscale(message, attach_image_url, file_name):
                     if firebase_url:
                         client.thumbnail_url = firebase_url
                         client.thumbnail_blob = blob_name
-                        await message.channel.send(f"Thumbnail added to firebase successfully!")
-                        print("click upscale button...")
+                        # await message.channel.send(f"Thumbnail added to firebase successfully!")
+                        print("Thumbnail added to firebase successfully!, click upscale button...")
                         if is_macos():
                             click_somewhere("img/mac/upscale_subtle.png",interval_seconds = 5, repeat = 1, retry= 3, retry_interval = 2)
                         else:
