@@ -196,49 +196,44 @@ def click_somewhere(image_file, interval_seconds=1, repeat=1, retry=2, retry_int
                 print(f"Retry attempt {attempt}/{retry} for finding image: {image_file}")
                 time.sleep(retry_interval)  # Wait before retrying
 
+            # Locate the image on the screen
+            location = pyautogui.locateOnScreen(image_file, confidence=0.8)
+
+            if location:
+                print(f"Image found on attempt {attempt + 1}!")
+                # Get the center of the located image
+                center = pyautogui.center(location)
+
+                # Check if running on MacOS (for Retina display adjustment)
+                if is_macos():
+                    # Adjust for Retina display by dividing coordinates by 2
+                    click_x, click_y = center[0] / 2, center[1] / 2
+                    print(f"MacOS detected - Using adjusted coordinates: ({click_x}, {click_y})")
+                else:
+                    # Use original coordinates on non-MacOS systems
+                    click_x, click_y = center[0], center[1]
+                    print(f"Using original coordinates: ({click_x}, {click_y})")
+
+                # Perform the specified number of clicks
                 for i in range(repeat):
-                    time.sleep(interval_seconds)
-                    # Locate the image on the screen
-                    location = pyautogui.locateOnScreen(image_file, confidence=0.8)
-
-                    if location:
-                        print(f"Image found on attempt {attempt + 1}!")
-                        # Get the center of the located image
-                        center = pyautogui.center(location)
-
-                        # Check if running on MacOS (for Retina display adjustment)
-                        if is_macos():
-                            # Adjust for Retina display by dividing coordinates by 2
-                            click_x, click_y = center[0] / 2, center[1] / 2
-                            print(f"MacOS detected - Using adjusted coordinates: ({click_x}, {click_y})")
-                        else:
-                            # Use original coordinates on non-MacOS systems
-                            click_x, click_y = center[0], center[1]
-                            print(f"Using original coordinates: ({click_x}, {click_y})")
-
-                        # Click the center of the image
-                        pyautogui.click(x=click_x, y=click_y)
+                    if i > 0:  # Don't wait before the first click
+                        time.sleep(interval_seconds)
+                    # Click the center of the image
+                    pyautogui.click(x=click_x, y=click_y)
+                    print(f"Click {i+1}/{repeat} completed")
 
                 return True
 
-            # If we've tried all attempts and still haven't found the image
-            if attempt == retry:
-                print(f"Image not found after {retry + 1} attempts: {image_file}")
-                return False
+            print(f"Image not found on attempt {attempt + 1}")
+            # Continue to next retry attempt if image not found
 
         except Exception as e:
             print(f"Error in click_somewhere (attempt {attempt + 1}): {str(e)}")
             import traceback
             traceback.print_exc()
 
-            # If this was our last retry attempt, return False
-            if attempt == retry:
-                return False
-
-            # Otherwise continue to the next retry attempt
-            print(f"Retrying due to error...")
-
-    # This should never be reached, but just in case
+    # If we've tried all attempts and still haven't found the image
+    print(f"Image not found after {retry + 1} attempts: {image_file}")
     return False
 
 def is_macos():

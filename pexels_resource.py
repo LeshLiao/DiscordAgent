@@ -91,3 +91,5 @@ if __name__ == "__main__":
     # printImageUrl(api_key, 'nature', 4)     # 20250228 added to waiting list (19)
     # printImageUrl(api_key, 'nature', 5)     # 20250228 added to waiting list (34)
     # printImageUrl(api_key, 'nature', 6)     # 20250228 added to waiting list (31)
+    # printImageUrl(api_key, 'nature', 7)     # 20250228 added to waiting list (22)
+    # printImageUrl(api_key, 'nature', 8)     # 20250228 added to waiting list (22)

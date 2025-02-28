@@ -162,17 +162,19 @@ async def handle_upscale(message, attach_image_url, file_name):
                         # await message.channel.send(f"Thumbnail added to firebase successfully!")
                         print("Thumbnail added to firebase successfully!, click upscale button...")
                         if is_macos():
-                            click_somewhere("img/mac/upscale_subtle.png",interval_seconds = 5, repeat = 1, retry= 3, retry_interval = 2)
+                            click_somewhere("img/mac/upscale_subtle.png",interval_seconds = 6, repeat = 1, retry= 3, retry_interval = 2)
                         else:
-                            click_somewhere("img/linux/upscale_subtle.png",interval_seconds = 5, repeat = 1, retry= 3, retry_interval = 2)
+                            click_somewhere("img/linux/upscale_subtle.png",interval_seconds = 6, repeat = 1, retry= 3, retry_interval = 2)
                     else:
                         await message.channel.send("Failed to upload thumbnail to Firebase")
             elif "- <@" in message.content and "discordapp" in attach_image_url:
                 print("click U4 option...")
                 if is_macos():
-                    click_somewhere("img/mac/u4.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
+                    # Sometimes, Discord displays a 'poop' image when an image fails to load
+                    # therefore, it's necessary to retry.
+                    click_somewhere("img/mac/u4.png",interval_seconds = 2, repeat = 1, retry = 30, retry_interval = 5)
                 else:
-                    click_somewhere("img/linux/u4.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
+                    click_somewhere("img/linux/u4.png",interval_seconds = 2, repeat = 1, retry = 30, retry_interval = 5)
 
         else:
             print(f"Message:")
