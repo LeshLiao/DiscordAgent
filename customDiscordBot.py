@@ -15,6 +15,7 @@ from api.wallpaper_api import WallpaperAPI, ImageItem, DownloadItem
 from api.publish_manager import PublishManager, PublishConfig  # Add this line
 from image_url_detection import is_image_url
 from sendMessage import send_message
+from pexels_resource import add_one
 
 load_dotenv()
 discord_token = os.getenv('DISCORD_TOKEN')
@@ -90,7 +91,7 @@ async def handle_upload(message, attach_image_url):
     prompt_string = "mobile wallpaper --ar 9:16 --iw 3"
     try:
         if attach_image_url:
-            await message.channel.send(f"Processing prompt: {attach_image_url}")
+            print(f"Processing prompt: {attach_image_url}")
             if is_macos():
                 click_somewhere("img/mac/message_upscale_textbox.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
             else:
@@ -98,15 +99,36 @@ async def handle_upload(message, attach_image_url):
             type_imagine(f"{attach_image_url} " + prompt_string)
         else:
             is_image, content_type = is_image_url(message.content)
-            print(is_image)
             if is_image:
                 image_url = message.content
-                await message.channel.send(f"Processing prompt: {image_url}")
+                print(f"Processing prompt: {image_url}")
                 if is_macos():
                     click_somewhere("img/mac/message_upscale_textbox.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
                 else:
                     click_somewhere("img/linux/message_upscale_textbox.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
                 type_imagine(f"{image_url} " + prompt_string)
+
+    except Exception as e:
+        print(f"Error in handle_upload: {e}")
+
+async def handle_to_waiting_list(message, attach_image_url):
+    note = ""
+    try:
+        temp_url = ""
+        result = False
+        if message.content in "Discord Message:":
+            pass
+        elif attach_image_url:
+            temp_url = attach_image_url
+            result = add_one("discord", note, temp_url)
+        else:
+            is_image, content_type = is_image_url(message.content)
+            if is_image:
+                image_url = message.content
+                temp_url = image_url
+                result = add_one("discord", note, temp_url)
+        if result:
+            await message.channel.send(f"Discord Message: Added url successfully: {temp_url}")
 
     except Exception as e:
         print(f"Error in handle_upload: {e}")
@@ -250,8 +272,8 @@ async def on_message(message):
             await handle_upload(message, attach_image_url)
         elif channel_name == "upscale":
             await handle_upscale(message, attach_image_url, file_name)
-        # elif channel_name == "publish":
-        #     await handle_publish(message)
+        elif channel_name == "to_waiting_list":
+            await handle_to_waiting_list(message, attach_image_url)
 
     except Exception as e:
         print(f"Error in on_message: {e}")

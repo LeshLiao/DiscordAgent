@@ -72,8 +72,10 @@ def add_one(source, note, url):
     # Check the response
     if response["success"]:
         print("Item added successfully.")
+        return True
     else:
         print(f"Failed to add item: {response['message']}")
+        return False
 
 if __name__ == "__main__":
     # Load environment variables from .env file
@@ -93,3 +95,12 @@ if __name__ == "__main__":
     # printImageUrl(api_key, 'nature', 6)     # 20250228 added to waiting list (31)
     # printImageUrl(api_key, 'nature', 7)     # 20250228 added to waiting list (22)
     # printImageUrl(api_key, 'nature', 8)     # 20250228 added to waiting list (22)
+
+    # printImageUrl(api_key, 'space', 1)     # 20250228 added to waiting list (16)
+    # printImageUrl(api_key, 'space', 2)     # 20250228 added to waiting list ()
+    # printImageUrl(api_key, 'space', 3)     # 20250228 added to waiting list ()
+    # printImageUrl(api_key, 'space', 4)     # 20250228 added to waiting list ()
+    # printImageUrl(api_key, 'space', 5)     # 20250228 added to waiting list ()
+
+    # printImageUrl(api_key, 'minimalistic wallpaper', 1)     # 20250228 added to waiting list ()
+    printImageUrl(api_key, 'minimalistic wallpaper', 2)     # 20250228 added to waiting list ()
