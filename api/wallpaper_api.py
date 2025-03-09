@@ -5,8 +5,19 @@ from dataclasses import dataclass
 
 @dataclass
 class ImageItem:
+    """
+    Represents an image item with type, resolution, link, and blob information
+
+    Attributes:
+        type: The type of the image (e.g., "LD", "SD", "HD")
+        resolution: The resolution of the image (e.g., "800x600")
+        link: The URL where the image can be accessed
+        blob: The Firebase blob path reference for the image
+    """
     type: str
-    name: str
+    resolution: str
+    link: str
+    blob: str
 
 @dataclass
 class DownloadItem:
@@ -19,6 +30,7 @@ class DownloadItem:
 
 class WallpaperAPI:
     def __init__(self, base_url: str = "https://online-store-service.onrender.com"):
+    # def __init__(self, base_url: str = "http://localhost:4000"): # test local api
         self.base_url = base_url
         self.headers = {
             "Content-Type": "application/json"
@@ -109,7 +121,7 @@ class WallpaperAPI:
             "sizeOptions": size_options,
             "thumbnail": thumbnail,
             "preview": preview,
-            "imageList": [{"type": img.type, "name": img.name} for img in image_list],
+            "imageList": [{"type": img.type, "resolution": img.resolution, "link": img.link, "blob": img.blob} for img in image_list],
             "downloadList": [{"size": dl.size, "ext": dl.ext, "link": dl.link, "caption": dl.caption, "thumbnail_blob": dl.thumbnail_blob, "upscaled_blob": dl.upscaled_blob} for dl in download_list]
         }
 
@@ -246,3 +258,24 @@ class WallpaperAPI:
         }
 
         return self._make_request("PATCH", f"/api/items/waiting/{_id}", payload)
+
+
+    def patch_data_by_field(self, item_id, field, data):
+        """
+        Update a specific field of a wallpaper item.
+
+        Args:
+            item_id (str): The ID of the wallpaper item to update
+            field (str): The name of the field to update (e.g., 'imageList', 'tags')
+            data: The new data for the specified field
+
+        Returns:
+            Dict[str, Union[bool, str]]: Dictionary with status and message
+        """
+        # Create payload with only the field to be updated
+        payload = {
+            field: data
+        }
+
+        # Make PATCH request to the API endpoint
+        return self._make_request("PATCH", f"/api/items/patch_field/{item_id}", payload)

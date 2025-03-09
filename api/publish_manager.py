@@ -61,6 +61,7 @@ class PublishManager:
         photo_type: Optional[str] = None,
         free_download: Optional[bool] = None,
         preview: Optional[str] = None,
+        imagesList: Optional[List[Dict[str, str]]] = None
     ) -> str:
         """
         Publish a new wallpaper item
@@ -78,7 +79,7 @@ class PublishManager:
             photo_type: Optional custom photo type
             free_download: Optional custom free download flag
             preview: Optional custom preview image
-
+            imagesList: Optional list of image data from resize_all_and_upload_to_firebase
         Returns:
             bool: True if publication was successful, False otherwise
         """
@@ -91,8 +92,20 @@ class PublishManager:
             final_free_download = free_download if free_download is not None else self.config.default_free_download
             final_preview = preview or self.config.default_preview
 
-            # Create image and download lists
-            image_list = self._create_image_list()
+            # Process the imagesList data into the ImageItem objects
+            image_list = []
+            if imagesList and isinstance(imagesList, list):
+                for img in imagesList:
+                    # Convert directly from the resize_all_and_upload_to_firebase format
+                    # to the new ImageItem class format
+                    image_list.append(ImageItem(
+                        type=img["type"],
+                        resolution=img["resolution"],
+                        link=img["link"],
+                        blob=img["blob"]
+                    ))
+
+            # Create download lists
             download_list = self._create_download_list(upscaled_url, resolution, "jpg", caption, thumbnail_blob, upscaled_blob)
 
             # Add wallpaper through API

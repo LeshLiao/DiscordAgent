@@ -103,4 +103,10 @@ if __name__ == "__main__":
     # printImageUrl(api_key, 'space', 5)     # 20250228 added to waiting list ()
 
     # printImageUrl(api_key, 'minimalistic wallpaper', 1)     # 20250228 added to waiting list ()
-    printImageUrl(api_key, 'minimalistic wallpaper', 2)     # 20250228 added to waiting list ()
+    # printImageUrl(api_key, 'minimalistic wallpaper', 2)     # 20250228 added to waiting list ()
+
+    printImageUrl(api_key, 'nature', 9)     # 20250228 added to waiting list
+    printImageUrl(api_key, 'nature', 10)     # 20250228 added to waiting list
+    printImageUrl(api_key, 'nature', 11)     # 20250228 added to waiting list
+    printImageUrl(api_key, 'nature', 12)     # 20250228 added to waiting list
+    printImageUrl(api_key, 'nature', 13)     # 20250228 added to waiting list

@@ -10,7 +10,7 @@ import time
 import argparse
 from open_ai import ImageAnalyzer
 
-from utility import type_imagine, download_image, upload_to_firebase_3, initialize_firebase, safe_delete, click_somewhere, is_macos
+from utility import type_imagine, download_image, upload_to_firebase_3, initialize_firebase, safe_delete, click_somewhere, is_macos, resize_all_and_upload_to_firebase
 from api.wallpaper_api import WallpaperAPI, ImageItem, DownloadItem
 from api.publish_manager import PublishManager, PublishConfig  # Add this line
 from image_url_detection import is_image_url
@@ -42,6 +42,7 @@ class CustomBot(commands.Bot):
         self.upscaled_url = ""
         self.upscaled_blob = ""
         self.waiting_id = ""
+        self.imageList_data = ""
         self.auto_mode = False
         print("CustomBot init")
         initialize_firebase()
@@ -137,7 +138,7 @@ async def handle_upscale(message, attach_image_url, file_name):
     try:
         if file_name.lower().endswith((".png", ".jpg", ".jpeg", ".gif")):
             if "- Upscaled" in message.content:
-                client.upscaled_path = await download_image(attach_image_url, file_name, "upscaled")
+                client.upscaled_path = await download_image(attach_image_url)
                 if client.upscaled_path:
                     firebase_url, blob_name = upload_to_firebase_3(client.upscaled_path, "upscaled")
                     if firebase_url:
@@ -159,8 +160,11 @@ async def handle_upscale(message, attach_image_url, file_name):
 
                                 # Clear the URLs after successful publishing
                                 client.thumbnail_url = ""
+                                client.thumbnail_blob = ""
                                 client.upscaled_url = ""
+                                client.upscaled_blob = ""
                                 client.waiting_id = ""
+                                client.imageList_data = ""
 
                                 # GET next url from waiting list
                                 await check_waiting_list()
@@ -175,8 +179,11 @@ async def handle_upscale(message, attach_image_url, file_name):
                         await message.channel.send("Failed to upload upscaled image to Firebase")
 
             elif "- Image #" in message.content:
-                client.thumbnail_path = await download_image(attach_image_url, file_name, "thumbnail")
+                client.thumbnail_path = await download_image(attach_image_url)
                 if client.thumbnail_path:
+                    client.imageList_data = await resize_all_and_upload_to_firebase(client.thumbnail_path, False)
+                    if (client.imageList_data):
+                        print("Downsize all type and added to firebase successfully!")
                     firebase_url, blob_name = upload_to_firebase_3(client.thumbnail_path, "thumbnail")
                     if firebase_url:
                         client.thumbnail_url = firebase_url
@@ -235,7 +242,8 @@ async def publish_item(message, title, tags):
             upscaled_blob=client.upscaled_blob,
             title=title,  # You might want to make this configurable
             tags=tags,
-            resolution="1632x2912"  # This matches your original aspect ratio of 9:16
+            resolution="1632x2912",  # This matches your original aspect ratio of 9:16
+            imagesList = client.imageList_data
         )
         return new_itemId
 
@@ -337,6 +345,8 @@ async def check_waiting_list():
     else:
         # Handle error case
         print(f"Error: {response['message']}")
+        if "No waiting items found." in response.get('message', ''):
+            print("\n========== No waiting items found. ==========\n")
 
 if __name__ == "__main__":
     # Hint

@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 import uuid
 import pytz
 import platform
+import asyncio
 
 # Load environment variables
 load_dotenv()
@@ -41,7 +42,7 @@ def initialize_firebase():
 
 
 # when you use blob.make_public(), the URL will have no expiration
-def upload_to_firebase_3(local_file_path, firebase_folder):
+def upload_to_firebase_3(local_file_path, firebase_folder, resolution = ""):
     """
     Uploads an image to Firebase Storage and returns a non-signed download URL
 
@@ -62,7 +63,10 @@ def upload_to_firebase_3(local_file_path, firebase_folder):
 
         # Create unique filename with UTC timestamp and UUID
         time_string = get_utc_time()
-        firebase_filename = f"{time_string}{firebase_folder}_{str(uuid.uuid4())}{file_ext}"
+        resolution_name = ""
+        if resolution != "":
+            resolution_name = resolution + "_"
+        firebase_filename = f"{time_string}{firebase_folder}_{resolution_name}{str(uuid.uuid4())}{file_ext}"
 
         # Create the full path in Firebase Storage
         destination_blob_name = f'images/{firebase_folder}/{firebase_filename}'
@@ -81,7 +85,7 @@ def upload_to_firebase_3(local_file_path, firebase_folder):
         )
 
         print(f"File uploaded successfully to Firebase Storage: {destination_blob_name}")
-        print(f"Download URL: {download_url}")
+        #print(f"Download URL: {download_url}")
 
         return download_url, destination_blob_name
 
@@ -90,7 +94,7 @@ def upload_to_firebase_3(local_file_path, firebase_folder):
         return None, None  # Return both values as None instead of just None
 
 
-async def download_image(url, filename, prefix):
+async def download_and_convert_image(url, filename, prefix):
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url, timeout=30) as response:
@@ -147,8 +151,148 @@ async def download_image(url, filename, prefix):
                     return None
 
     except Exception as e:
-        print(f"Error in download_image: {e}")
+        print(f"Error in download_and_convert_image: {e}")
         return None
+
+
+async def download_image(url):
+    """
+    Downloads a JPG image from a URL and returns the local file path.
+
+    Args:
+        url (str): The URL of the JPG image to download
+
+    Returns:
+        str: The local path to the downloaded image file, or empty string if failed
+    """
+    try:
+        # Create output folder if it doesn't exist
+        output_folder = "output"
+        os.makedirs(output_folder, exist_ok=True)
+
+        # Generate a unique filename for the downloaded image
+        unique_id = str(uuid.uuid4())
+        local_file_path = os.path.join(output_folder, f"download_{get_utc_time()}{unique_id}.jpg")
+
+        # Download the image directly using aiohttp
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, timeout=30) as response:
+                if response.status == 200:
+                    # Save the image data directly to the file
+                    with open(local_file_path, "wb") as f:
+                        f.write(await response.read())
+
+                    print(f"Successfully downloaded image from {url} to {local_file_path}")
+                    return local_file_path
+                else:
+                    print(f"Failed to download image. Status code: {response.status}")
+                    return ""
+
+    except Exception as e:
+        print(f"Error in download_image: {e}")
+        return ""
+
+async def resize_image(target_file, prefix, reduce_size = 0.5, reduce_quality = 100):
+    """
+    Download an image from URL and resize it to a smaller size.
+
+    Args:
+        url (str): URL of the image to download and resize
+        prefix (str): Prefix for the output filename
+
+    Returns:
+        str: Path to the resized image file or None if an error occurs
+    """
+    try:
+        # Create output folder if it doesn't exist
+        output_folder = "output"
+        os.makedirs(output_folder, exist_ok=True)
+
+        # Generate a temporary filename for the downloaded image
+        # temp_filename = f"temp_{uuid.uuid4()}.jpg"
+
+        # # Download the image first
+        # target_file = await download_and_convert_image(url, temp_filename, "original")
+        # if not target_file:
+        #     print(f"Failed to download image from {url}")
+        #     return None
+
+        # Open the downloaded image and resize it
+        with Image.open(target_file) as img:
+            # Get original dimensions
+            original_width, original_height = img.size
+
+            # Calculate new dimensions (reduce to 50% of original size)
+            # You can adjust this ratio as needed
+            new_width = int(original_width * reduce_size)
+            new_height = int(original_height * reduce_size)
+
+            # Resize the image
+            resized_img = img.resize((new_width, new_height), Image.LANCZOS)
+
+            # Create a filename for the resized image
+            resolution_name = f"{prefix}_{new_width}x{new_height}_"
+            resized_filename = f"{resolution_name}{os.path.basename(target_file)}"
+            resized_path = os.path.join(output_folder, resized_filename)
+
+            # Save the resized image
+            resized_img.save(resized_path, 'JPEG', quality=reduce_quality)
+
+            # Delete the original downloaded file if it's different from the resized path
+            #if target_file != resized_path:
+            #    safe_delete(target_file)
+
+            new_resolution = f"{new_width}x{new_height}"
+            print(f"Successfully resized image from {original_width}x{original_height} to {new_width}x{new_height}")
+
+            return resized_path, new_resolution
+
+    except Exception as e:
+        print(f"Error in resize_image: {e}")
+        return None
+
+async def resize_all_and_upload_to_firebase(target_local_file, delete_target_local_file_when_finish = True):
+        # Resize the image to different resolutions
+    LD_file_path, LD_resolution = await resize_image(target_local_file, "LD", 0.25)
+    SD_file_path, SD_resolution = await resize_image(target_local_file, "SD", 0.5)
+    HD_file_path, HD_resolution = await resize_image(target_local_file, "HD", 1.0)
+
+    # Upload resized images to Firebase
+    LD_firebase_url, LD_blob_name = upload_to_firebase_3(LD_file_path, "LD", LD_resolution)
+    SD_firebase_url, SD_blob_name = upload_to_firebase_3(SD_file_path, "SD", SD_resolution)
+    HD_firebase_url, HD_blob_name = upload_to_firebase_3(HD_file_path, "HD", HD_resolution)
+
+    # You can add code to delete the local files here
+    safe_delete(LD_file_path)
+    safe_delete(SD_file_path)
+    safe_delete(HD_file_path)
+    if delete_target_local_file_when_finish:
+        safe_delete(target_local_file)
+
+    # Create image list as a list of dictionaries (proper JSON structure)
+    image_list = [
+        {
+            "type": "LD",
+            "resolution": LD_resolution,
+            "link": LD_firebase_url,
+            "blob": LD_blob_name
+        },
+        {
+            "type": "SD",
+            "resolution": SD_resolution,
+            "link": SD_firebase_url,
+            "blob": SD_blob_name
+        },
+        {
+            "type": "HD",
+            "resolution": HD_resolution,
+            "link": HD_firebase_url,
+            "blob": HD_blob_name
+        }
+    ]
+
+    return image_list
+
 
 def type_imagine(prompt):
     # Type the command
@@ -246,6 +390,18 @@ def is_macos():
     system = platform.system()
     return system == "Darwin"  # MacOS reports as "Darwin" in platform.system()
 
+
+async def downsize_jpg():
+    # Test resize image
+
+    result_path = await resize_image(
+    "https://firebasestorage.googleapis.com/v0/b/palettex-37930.appspot.com/o/images%2Fthumbnail%2F20250228_145327_thumbnail_a70ddebe-a29b-45fa-b12e-3c1b7c75d296.jpg?alt=media", "my_prefix", 1.0)
+    print("result_path:" + result_path if result_path else "None")
+
+    result_path = await resize_image(
+    "https://firebasestorage.googleapis.com/v0/b/palettex-37930.appspot.com/o/images%2Fthumbnail%2F20250228_145327_thumbnail_a70ddebe-a29b-45fa-b12e-3c1b7c75d296.jpg?alt=media", "my_prefix", 0.25)
+    print("result_path:" + result_path if result_path else "None")
+
 # Usage example:
 if __name__ == "__main__":
 
@@ -261,7 +417,7 @@ if __name__ == "__main__":
     # Test click button
     # click_somewhere("img/Message_upscale_textbox.png")
 
-    click_somewhere("img/mongodb.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
+    #click_somewhere("img/mongodb.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
 
 
 
@@ -271,3 +427,6 @@ if __name__ == "__main__":
     # else:
     #     print(f"Not running on MacOS. Current OS: {platform.system()}")
 
+
+    # Down size image test, Run the async main function
+    asyncio.run(downsize_jpg())
