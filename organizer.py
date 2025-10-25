@@ -1,6 +1,7 @@
 import asyncio
 import time
 import json
+import os
 from api.wallpaper_api import WallpaperAPI, ImageItem, DownloadItem
 from utility import type_imagine, download_and_convert_image, upload_to_firebase_3, initialize_firebase, safe_delete, click_somewhere, is_macos, resize_image, download_image, resize_all_and_upload_to_firebase, blur_image, resize_one_blur_and_upload_to_firebase
 
@@ -186,8 +187,159 @@ async def add_blur_to_all_wallpapers():
     except Exception as e:
         print(f"Error processing data: {e}")
 
+async def download_all_images_by_type(type="BL", file_name_prefix="images_"):
+    """
+    Download all images of a specific type from the database to the output folder.
+    Adds a prefix combining file_name_prefix + type to each filename.
+
+    Args:
+        type (str): Image type to download. Options: "BL", "LD", "SD", "HD"
+                   Default is "BL" (blur)
+        file_name_prefix (str): Prefix to add before the type and filename.
+                               Default is "images_"
+
+    Examples:
+        # Download BL images with "images_BL_" prefix
+        await download_all_images_by_type(type="BL", file_name_prefix="images_")
+        Result: images_BL_20251025_075513_BL_204x364_7bf3370b-8bed-46e3-a996-8c96208779be.jpg
+    """
+    try:
+        # Combine prefix with type to create final prefix
+        final_prefix = f"{file_name_prefix}{type}_"
+
+        # Create output directory with type-specific subfolder
+        output_dir = f"output/{type.lower()}_images"
+        os.makedirs(output_dir, exist_ok=True)
+
+        print(f"Output directory: {output_dir}")
+        print(f"Image type: {type}")
+        print(f"Base prefix: '{file_name_prefix}'")
+        print(f"Final prefix: '{final_prefix}'")
+
+        # Get all wallpapers from the API
+        result = api_client.get_wallpapers()
+
+        message_str = result.get('message', '').strip()
+        wallpapers = json.loads(message_str)
+
+        if not isinstance(wallpapers, list):
+            print("Error: 'wallpapers' is not a list.")
+            return
+
+        total_items = len(wallpapers)
+        print(f"Total wallpapers: {total_items}")
+
+        # Counters
+        downloaded_count = 0
+        skipped_count = 0
+        error_count = 0
+        no_image_count = 0
+
+        print(f"\n=== DOWNLOADING {type} IMAGES ===")
+
+        for index, item in enumerate(wallpapers, 1):
+            # if index > 2:
+            #     print(f" ===== TEST break =====")
+            #     break
+
+            item_id = item.get('itemId', 'unknown')
+            image_list = item.get('imageList', [])
+
+            # Find the image with the specified type
+            target_image = None
+            for img in image_list:
+                if img.get('type') == type:
+                    target_image = img
+                    break
+
+            if not target_image:
+                # Only show message for first few items to avoid spam
+                if no_image_count < 5 or index % 50 == 0:
+                    print(f"({index}/{total_items}) ⊘ No {type} image found for item {item_id}")
+                no_image_count += 1
+                continue
+
+            # Get the image URL and blob path
+            image_url = target_image.get('link')
+            blob_path = target_image.get('blob', '')
+
+            if not image_url:
+                print(f"({index}/{total_items}) ✗ No link found for {type} image in item {item_id}")
+                error_count += 1
+                continue
+
+            try:
+                # Extract original filename from blob path
+                if blob_path:
+                    # Example blob: "images/BL/20250228_145732_BL_xxx.jpg"
+                    original_filename = os.path.basename(blob_path)
+                else:
+                    # Fallback: try to extract from URL
+                    from urllib.parse import urlparse, unquote
+                    parsed_url = urlparse(image_url)
+                    path = unquote(parsed_url.path)
+
+                    if '/o/' in path:
+                        filename_with_path = path.split('/o/')[-1].split('?')[0]
+                        filename_with_path = unquote(filename_with_path)
+                        original_filename = os.path.basename(filename_with_path)
+                    else:
+                        # Last resort: use itemId with type
+                        file_extension = '.jpg'
+                        original_filename = f"{item_id}_{type}{file_extension}"
+
+                # Add final prefix (base prefix + type + underscore) to the filename
+                prefixed_filename = f"{final_prefix}{original_filename}"
+
+                # Full path for the final destination
+                final_output_path = os.path.join(output_dir, prefixed_filename)
+
+                # Check if file already exists
+                if os.path.exists(final_output_path):
+                    if skipped_count < 5 or index % 50 == 0:
+                        print(f"({index}/{total_items}) ⊙ Already exists: {prefixed_filename}")
+                    skipped_count += 1
+                    continue
+
+                # Download using existing utility function
+                temp_downloaded_path = await download_image(image_url)
+
+                # Move/rename to our target location with prefixed filename
+                import shutil
+                shutil.move(temp_downloaded_path, final_output_path)
+
+                print(f"({index}/{total_items}) ✓ Downloaded: {prefixed_filename}")
+                downloaded_count += 1
+
+            except Exception as e:
+                print(f"({index}/{total_items}) ✗ Error downloading {item_id}: {str(e)}")
+                error_count += 1
+                continue
+
+        # Summary
+        print("\n" + "=" * 50)
+        print("DOWNLOAD SUMMARY")
+        print("=" * 50)
+        print(f"Image type:        {type}")
+        print(f"Total wallpapers:  {total_items}")
+        print(f"✓ Downloaded:      {downloaded_count}")
+        print(f"⊙ Skipped:         {skipped_count}")
+        print(f"⊘ No {type} image:   {no_image_count}")
+        print(f"✗ Errors:          {error_count}")
+        print(f"\nFilename format: {final_prefix}[original_name].jpg")
+        print(f"All {type} images saved to: {output_dir}")
+
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON: {e}")
+    except Exception as e:
+        print(f"Error in download_all_images_by_type: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
-    # asyncio.run(main())                   # Transfer old data and update all imageList
-    # asyncio.run(test_area())              # test generate blur image
-    asyncio.run(add_blur_to_all_wallpapers())   # Generate all blur to database
+    # asyncio.run(main())                       # Transfer old data and update all imageList
+    # asyncio.run(test_area())                  # test generate blur image
+    # asyncio.run(add_blur_to_all_wallpapers())   # Generate all blur to database
+
+    # Download BL (blur) images - default settings
+    asyncio.run(download_all_images_by_type(type="BL", file_name_prefix="images_"))
