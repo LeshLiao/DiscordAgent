@@ -279,3 +279,35 @@ class WallpaperAPI:
 
         # Make PATCH request to the API endpoint
         return self._make_request("PATCH", f"/api/items/patch_field/{item_id}", payload)
+
+
+    def add_one_image_list_item(self, item_id: str, field: str, data: dict) -> Dict[str, Union[bool, str]]:
+        """
+        Add a single image item to the imageList array.
+
+        Args:
+            item_id: The wallpaper item ID
+            field: Must be 'imageList'
+            data: Image object with type, resolution, link, blob
+
+        Returns:
+            Dictionary with success status and message
+        """
+        if field != "imageList":
+            return {
+                "success": False,
+                "message": f"Invalid field '{field}'. This method only supports 'imageList'."
+            }
+
+        required_fields = ["type", "resolution", "link", "blob"]
+        missing_fields = [f for f in required_fields if f not in data]
+
+        if missing_fields:
+            return {
+                "success": False,
+                "message": f"Missing required fields: {', '.join(missing_fields)}"
+            }
+
+        payload = {field: data}
+
+        return self._make_request("PATCH", f"/api/items/add_one_image_list_item/{item_id}", payload)

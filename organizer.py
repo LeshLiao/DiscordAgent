@@ -2,7 +2,7 @@ import asyncio
 import time
 import json
 from api.wallpaper_api import WallpaperAPI, ImageItem, DownloadItem
-from utility import type_imagine, download_and_convert_image, upload_to_firebase_3, initialize_firebase, safe_delete, click_somewhere, is_macos, resize_image, download_image, resize_all_and_upload_to_firebase
+from utility import type_imagine, download_and_convert_image, upload_to_firebase_3, initialize_firebase, safe_delete, click_somewhere, is_macos, resize_image, download_image, resize_all_and_upload_to_firebase, blur_image, resize_one_blur_and_upload_to_firebase
 
 api_client = WallpaperAPI()
 
@@ -130,5 +130,64 @@ async def main():
         print(f"Error processing data: {e}")
 
 
+async def test_area():
+    test = "https://firebasestorage.googleapis.com/v0/b/palettex-37930.appspot.com/o/images%2Fthumbnail%2F20250305_055540_thumbnail_8ae9af09-a8ac-4b14-a72c-cec1701b7905.jpg?alt=media"
+
+    target_local_file = await download_image(test)
+
+    LD_file_path, LD_resolution = await resize_image(target_local_file, "BL", 0.25, reduce_quality=100)
+    BLUR_file_path, BLUR_resolution = blur_image(LD_file_path, "BL", blur_strength=32)
+
+async def add_blur_to_all_wallpapers():
+    try:
+        initialize_firebase()
+    except Exception as e:
+        print(f"initialize_firebase Error: {str(e)}")
+
+    result = api_client.get_wallpapers()
+    test_index = 0
+
+    try:
+        message_str = result.get('message', '').strip()
+        wallpapers = json.loads(message_str)
+
+        if isinstance(wallpapers, list):
+            print(f"Total: {len(wallpapers)}")
+
+        print("\n=== ADDING BLUR IMAGES ===")
+        for item in wallpapers:
+            test_index += 1
+
+            item_id = item.get('itemId', '0')
+            thumbnail = item.get('thumbnail', 'N/A')
+
+            # Download thumbnail and create blur version
+            target_local_file = await download_image(thumbnail)
+
+            # This should return a dict with type, resolution, link, blob
+            updated_data = await resize_one_blur_and_upload_to_firebase(target_local_file)
+
+            # Add the BL image to existing imageList
+            response = api_client.add_one_image_list_item(item_id, "imageList", updated_data)
+
+            if not response.get('success', False):
+                print(f"Failed to add blur image for item {item_id}")
+                print(f"API call failed: {response.get('message', 'Unknown error')}")
+                break
+            else:
+                print(f"✓ Successfully added blur image to item {item_id} ({test_index}/{len(wallpapers)})")
+
+            # if test_index >= 2:
+            #     print(f" ===== TEST break =====")
+            #     break
+
+    except json.JSONDecodeError as e:
+        print(f"Error parsing JSON: {e}")
+    except Exception as e:
+        print(f"Error processing data: {e}")
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    # asyncio.run(main())                   # Transfer old data and update all imageList
+    # asyncio.run(test_area())              # test generate blur image
+    asyncio.run(add_blur_to_all_wallpapers())   # Generate all blur to database

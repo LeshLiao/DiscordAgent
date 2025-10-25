@@ -251,6 +251,52 @@ async def resize_image(target_file, prefix, reduce_size = 0.5, reduce_quality = 
         print(f"Error in resize_image: {e}")
         return None
 
+def blur_image(target_file, prefix, blur_strength=8):
+    """
+    Creates a blurred version of the input image.
+
+    Args:
+        target_file (str): Path to the source image file
+        prefix (str): Prefix for the output filename
+        blur_strength (int): Strength of the blur effect (higher means more blur)
+
+    Returns:
+        tuple: (path to blurred image, resolution string)
+    """
+    try:
+        from PIL import Image, ImageFilter
+        import os
+        import uuid
+
+        # Create output folder if it doesn't exist
+        output_folder = "output"
+        os.makedirs(output_folder, exist_ok=True)
+
+        # Open the image
+        with Image.open(target_file) as img:
+            # Get original dimensions
+            original_width, original_height = img.size
+
+            # Create a blurred version of the image
+            blurred_img = img.filter(ImageFilter.GaussianBlur(radius=blur_strength))
+
+            # Create a filename for the blurred image
+            resolution_name = f"{prefix}_{original_width}x{original_height}_"
+            blurred_filename = f"{resolution_name}{os.path.basename(target_file)}"
+            blurred_path = os.path.join(output_folder, blurred_filename)
+
+            # Save the blurred image with reduced quality for smaller file size
+            blurred_img.save(blurred_path, 'JPEG', quality=40)
+
+            new_resolution = f"{original_width}x{original_height}"
+            print(f"Successfully created blurred image from {target_file}")
+
+            return blurred_path, new_resolution
+
+    except Exception as e:
+        print(f"Error in blur_image: {e}")
+        return None, None
+
 async def resize_all_and_upload_to_firebase(target_local_file, delete_target_local_file_when_finish = True):
         # Resize the image to different resolutions
     LD_file_path, LD_resolution = await resize_image(target_local_file, "LD", 0.25)
@@ -261,6 +307,7 @@ async def resize_all_and_upload_to_firebase(target_local_file, delete_target_loc
     LD_firebase_url, LD_blob_name = upload_to_firebase_3(LD_file_path, "LD", LD_resolution)
     SD_firebase_url, SD_blob_name = upload_to_firebase_3(SD_file_path, "SD", SD_resolution)
     HD_firebase_url, HD_blob_name = upload_to_firebase_3(HD_file_path, "HD", HD_resolution)
+
 
     # You can add code to delete the local files here
     safe_delete(LD_file_path)
@@ -292,6 +339,27 @@ async def resize_all_and_upload_to_firebase(target_local_file, delete_target_loc
     ]
 
     return image_list
+
+async def resize_one_blur_and_upload_to_firebase(target_local_file, delete_target_local_file_when_finish = True):
+
+    LD_file_path, LD_resolution = await resize_image(target_local_file, "BL", 0.25, reduce_quality=100)
+    BL_file_path, BL_resolution = blur_image(LD_file_path, "BL", blur_strength=32)
+
+    BL_firebase_url, BL_blob_name = upload_to_firebase_3(BL_file_path, "BL", BL_resolution)
+
+
+    # You can add code to delete the local files here
+    safe_delete(LD_file_path)
+    safe_delete(BL_file_path)
+    if delete_target_local_file_when_finish:
+        safe_delete(target_local_file)
+
+    return {
+        "type": "BL",
+        "resolution": BL_resolution,
+        "link": BL_firebase_url,
+        "blob": BL_blob_name
+    }
 
 
 def type_imagine(prompt):
