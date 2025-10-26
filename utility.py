@@ -298,21 +298,25 @@ def blur_image(target_file, prefix, blur_strength=8):
         return None, None
 
 async def resize_all_and_upload_to_firebase(target_local_file, delete_target_local_file_when_finish = True):
-        # Resize the image to different resolutions
+    # Resize the image to different resolutions
     LD_file_path, LD_resolution = await resize_image(target_local_file, "LD", 0.25)
     SD_file_path, SD_resolution = await resize_image(target_local_file, "SD", 0.5)
     HD_file_path, HD_resolution = await resize_image(target_local_file, "HD", 1.0)
+    TEMP_file_path, TEMP_resolution = await resize_image(target_local_file, "BL", 0.25)
+    BL_file_path, BL_resolution = blur_image(TEMP_file_path, "BL", blur_strength=32)
 
     # Upload resized images to Firebase
     LD_firebase_url, LD_blob_name = upload_to_firebase_3(LD_file_path, "LD", LD_resolution)
     SD_firebase_url, SD_blob_name = upload_to_firebase_3(SD_file_path, "SD", SD_resolution)
     HD_firebase_url, HD_blob_name = upload_to_firebase_3(HD_file_path, "HD", HD_resolution)
-
+    BL_firebase_url, BL_blob_name = upload_to_firebase_3(BL_file_path, "BL", BL_resolution)
 
     # You can add code to delete the local files here
     safe_delete(LD_file_path)
     safe_delete(SD_file_path)
     safe_delete(HD_file_path)
+    safe_delete(TEMP_file_path)
+    safe_delete(BL_file_path)
     if delete_target_local_file_when_finish:
         safe_delete(target_local_file)
 
@@ -335,6 +339,12 @@ async def resize_all_and_upload_to_firebase(target_local_file, delete_target_loc
             "resolution": HD_resolution,
             "link": HD_firebase_url,
             "blob": HD_blob_name
+        },
+        {
+            "type": "BL",
+            "resolution": BL_resolution,
+            "link": BL_firebase_url,
+            "blob": BL_blob_name
         }
     ]
 
@@ -487,7 +497,7 @@ if __name__ == "__main__":
 
     #click_somewhere("img/mongodb.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
 
-
+    click_somewhere("img/mac/u4.png",interval_seconds = 0.5, repeat = 2, retry = 30, retry_interval = 5)
 
     # Detection current OS
     # if is_macos():
@@ -497,4 +507,4 @@ if __name__ == "__main__":
 
 
     # Down size image test, Run the async main function
-    asyncio.run(downsize_jpg())
+    # asyncio.run(downsize_jpg())

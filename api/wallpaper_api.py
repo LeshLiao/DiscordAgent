@@ -225,6 +225,25 @@ class WallpaperAPI:
 
         return response
 
+    def get_count_from_waiting_list(self) -> int:
+        """
+        Get the count of all waiting list items with empty status.
+
+        Returns:
+            Integer count of items with empty status (returns 0 on error)
+        """
+        response = self._make_request("GET", f"/api/items/waiting/count/all")
+
+        if response["success"]:
+            try:
+                # Parse the JSON response
+                data = json.loads(response["message"])
+                return data.get("count", 0)
+            except:
+                return 0
+
+        return 0
+
     def complete_waiting_list_item(
         self, _id: str,
         new_itemId: str,
