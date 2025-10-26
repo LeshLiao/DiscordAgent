@@ -32,7 +32,7 @@ class ImageAnalyzer:
         except Exception as e:
             raise Exception(f"Error encoding image: {str(e)}")
 
-    def _parse_response(self, response_content: str) -> Tuple[str, list]:
+    def parse_analyze_image_response(self, response_content: str) -> Tuple[str, list]:
         """
         Parse the JSON response from OpenAI, handling both direct JSON and code block formats
 
@@ -67,6 +67,46 @@ class ImageAnalyzer:
                 raise ValueError("'tags' field must be a list")
 
             return response_data["name"], response_data["tags"]
+
+        except json.JSONDecodeError as e:
+            raise Exception(f"Error parsing JSON response: {str(e)}\nResponse content: {response_content}")
+        except (KeyError, ValueError) as e:
+            raise Exception(f"Invalid response format: {str(e)}\nResponse content: {response_content}")
+        except Exception as e:
+            raise Exception(f"Unexpected error parsing response: {str(e)}\nResponse content: {response_content}")
+
+    def parse_describe_image_response(self, response_content: str) -> str:
+        """
+        Parse the JSON response from OpenAI for image description
+
+        Args:
+            response_content (str): Response string from OpenAI which might be either:
+                - Direct JSON: {"prompt": "description text"}
+                - Code block: ```json\n{"prompt": "description text"}\n```
+
+        Returns:
+            str: The description/prompt string
+        """
+        try:
+            # First, try to clean up the response if it's in a code block
+            cleaned_content = response_content.strip()
+            if cleaned_content.startswith('```json'):
+                # Remove ```json from start and ``` from end
+                cleaned_content = cleaned_content.replace('```json', '', 1).strip()
+                if cleaned_content.endswith('```'):
+                    cleaned_content = cleaned_content[:-3].strip()
+
+            # Parse the JSON
+            response_data = json.loads(cleaned_content)
+
+            # Validate required field
+            if 'prompt' not in response_data:
+                raise KeyError("Response missing required 'prompt' field")
+
+            if not isinstance(response_data['prompt'], str):
+                raise ValueError("'prompt' field must be a string")
+
+            return response_data["prompt"]
 
         except json.JSONDecodeError as e:
             raise Exception(f"Error parsing JSON response: {str(e)}\nResponse content: {response_content}")
@@ -118,12 +158,58 @@ class ImageAnalyzer:
 
             # Parse and return the response
             api_response = response.choices[0].message.content
-            print("api_response=")
+            print("analyze_image api_response=")
             print(api_response)
-            return self._parse_response(api_response)
+            return self.parse_analyze_image_response(api_response)
 
         except Exception as e:
             raise Exception(f"Error analyzing image: {str(e)}")
+
+
+    def describe_image(self, image_path: str) -> str:
+        """
+        Analyze an image using OpenAI's API and return a prompt string
+        """
+        try:
+            # Encode the image
+            base64_image = self._encode_image(image_path)
+
+            # Create the API request
+            response = self.client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "Please describe the image in as much detail as possible for use with an AI image tool. Always format the JSON response exactly as shown in the example."
+                    },
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": 'Please describe the image in as much detail as possible for use with an AI image tool. please return as a json format, here is a response example: {"prompt": "bright sunlight shining through dense cumulus clouds, vivid blue sky and horizon curvature of the Earth, dramatic lighting"}'
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{base64_image}"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                max_tokens=300
+            )
+
+            # Parse and return the response
+            api_response = response.choices[0].message.content
+            print("describe_image api_response=")
+            print(api_response)
+            return self.parse_describe_image_response(api_response)
+
+        except Exception as e:
+            raise Exception(f"Error analyzing image: {str(e)}")
+
 
 # Usage example:
 if __name__ == "__main__":

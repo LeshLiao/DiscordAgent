@@ -122,30 +122,81 @@ class CustomBot(commands.Bot):
 client = CustomBot()
 
 async def handle_upload(message, attach_image_url):
-    # click text box, and input prompt with image
+    """
+    Handle image upload by downloading the image, generating a prompt using AI,
+    and typing it into the Midjourney interface.
 
-    prompt_string = "mobile wallpaper --ar 9:16 --iw 3"
+    Args:
+        message: Discord message object
+        attach_image_url: URL of attached image (if any)
+    """
     try:
+        # Initialize the image analyzer
+        analyzer = ImageAnalyzer()
+
         if attach_image_url:
-            print(f"Processing prompt: {attach_image_url}")
+            # Download the image first
+            local_image_path = await download_image(attach_image_url)
+
+            if not local_image_path:
+                print("Failed to download image from attachment")
+                await message.channel.send("Error: Failed to download the attached image")
+                return
+
+            # Generate prompt description from the downloaded image
+            prompt_string = analyzer.describe_image(local_image_path)
+            print(f"Generated prompt: {prompt_string}")
+
+            # Click the text box
             if is_macos():
-                click_somewhere("img/mac/message_upscale_textbox.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
+                click_somewhere("img/mac/message_upscale_textbox.png", interval_seconds=2, repeat=1, retry=3, retry_interval=2)
             else:
-                click_somewhere("img/linux/message_upscale_textbox.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
-            type_imagine(f"{attach_image_url} " + prompt_string)
+                click_somewhere("img/linux/message_upscale_textbox.png", interval_seconds=2, repeat=1, retry=3, retry_interval=2)
+
+            # Type the generated prompt with aspect ratio
+            type_imagine(f"{prompt_string} --ar 9:16")
+
+            # Clean up the downloaded image
+            safe_delete(local_image_path)
+
         else:
+            # Check if the message content itself is an image URL
             is_image, content_type = is_image_url(message.content)
             if is_image:
                 image_url = message.content
-                print(f"Processing prompt: {image_url}")
+
+                # Download the image from the URL
+                local_image_path = await download_image(image_url)
+
+                if not local_image_path:
+                    print("Failed to download image from URL")
+                    await message.channel.send("Error: Failed to download the image from URL")
+                    return
+
+                # Generate prompt description from the downloaded image
+                prompt_string = analyzer.describe_image(local_image_path)
+                print(f"Generated prompt: {prompt_string}")
+
+                # Click the text box
                 if is_macos():
-                    click_somewhere("img/mac/message_upscale_textbox.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
+                    click_somewhere("img/mac/message_upscale_textbox.png", interval_seconds=2, repeat=1, retry=3, retry_interval=2)
                 else:
-                    click_somewhere("img/linux/message_upscale_textbox.png",interval_seconds = 2, repeat = 1, retry= 3, retry_interval = 2)
-                type_imagine(f"{image_url} " + prompt_string)
+                    click_somewhere("img/linux/message_upscale_textbox.png", interval_seconds=2, repeat=1, retry=3, retry_interval=2)
+
+                # Type the generated prompt with aspect ratio
+                type_imagine(f"{prompt_string} --ar 9:16")
+
+                # Clean up the downloaded image
+                safe_delete(local_image_path)
+            else:
+                print("No valid image found in attachment or message content")
+                await message.channel.send("Error: No valid image found. Please attach an image or provide an image URL.")
 
     except Exception as e:
         print(f"Error in handle_upload: {e}")
+        import traceback
+        traceback.print_exc()
+        await message.channel.send(f"Error processing image: {str(e)}")
 
 async def handle_to_waiting_list(message, attach_image_url):
     note = ""
