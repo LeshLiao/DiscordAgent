@@ -149,9 +149,9 @@ async def handle_upload(message, attach_image_url):
 
             # Click the text box
             if is_macos():
-                click_somewhere("img/mac/message_upscale_textbox.png", interval_seconds=2, repeat=1, retry=3, retry_interval=2)
+                click_somewhere("img/mac/bot_textbox.png", interval_seconds=2, repeat=2, retry=3, retry_interval=2)
             else:
-                click_somewhere("img/linux/message_upscale_textbox.png", interval_seconds=2, repeat=1, retry=3, retry_interval=2)
+                click_somewhere("img/linux/bot_textbox.png", interval_seconds=2, repeat=2, retry=3, retry_interval=2)
 
             # Type the generated prompt with aspect ratio
             type_imagine(f"{prompt_string} --ar 9:16")
@@ -179,18 +179,18 @@ async def handle_upload(message, attach_image_url):
 
                 # Click the text box
                 if is_macos():
-                    click_somewhere("img/mac/message_upscale_textbox.png", interval_seconds=2, repeat=1, retry=3, retry_interval=2)
+                    click_somewhere("img/mac/bot_textbox.png", interval_seconds=2, repeat=2, retry=3, retry_interval=2)
                 else:
-                    click_somewhere("img/linux/message_upscale_textbox.png", interval_seconds=2, repeat=1, retry=3, retry_interval=2)
+                    click_somewhere("img/linux/bot_textbox.png", interval_seconds=2, repeat=2, retry=3, retry_interval=2)
 
                 # Type the generated prompt with aspect ratio
                 type_imagine(f"{prompt_string} --ar 9:16")
 
                 # Clean up the downloaded image
                 safe_delete(local_image_path)
-            else:
-                print("No valid image found in attachment or message content")
-                await message.channel.send("Error: No valid image found. Please attach an image or provide an image URL.")
+            #else:
+            #    print("No valid image found in attachment or message content")
+                #await message.channel.send("Error: No valid image found. Please attach an image or provide an image URL.")
 
     except Exception as e:
         print(f"Error in handle_upload: {e}")
@@ -201,6 +201,11 @@ async def handle_upload(message, attach_image_url):
 async def handle_to_waiting_list(message, attach_image_url):
     note = ""
     try:
+        if "command_stop_progress" in message.content:
+            client.task_in_progress = False
+            await message.channel.send(f"=== set task_in_progress to False ===")
+            return
+
         temp_url = ""
         result = False
         #if message.content in "Discord Message:":
@@ -300,10 +305,6 @@ async def handle_bot(message, attach_image_url, file_name):
                     click_somewhere("img/mac/u4_extend.png",interval_seconds = 0.5, repeat = 2, retry = 30, retry_interval = 5)
                 else:
                     click_somewhere("img/linux/u4_extend.png",interval_seconds = 0.5, repeat = 2, retry = 30, retry_interval = 5)
-
-        else:
-            print(f"Message:")
-            print(message.content)
 
     except Exception as e:
         print(f"Error in handle_bot: {e}")
