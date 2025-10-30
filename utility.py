@@ -446,7 +446,7 @@ def click_somewhere(image_file, interval_seconds=1, repeat=1, retry=2, retry_int
 
                 return True
 
-            print(f"Image not found on attempt {attempt + 1}")
+            print(f"(attempt {attempt + 1}), image not found:" + image_file)
             # Continue to next retry attempt if image not found
 
         except Exception as e:
@@ -455,7 +455,8 @@ def click_somewhere(image_file, interval_seconds=1, repeat=1, retry=2, retry_int
             traceback.print_exc()
 
     # If we've tried all attempts and still haven't found the image
-    print(f"Image not found after {retry + 1} attempts: {image_file}")
+    print(f"Image not found after {retry + 1} attempts, not found: {image_file}")
+    print(f"[tried all] tried all attempts and still haven't found the image: {image_file}")
     return False
 
 def is_macos():
